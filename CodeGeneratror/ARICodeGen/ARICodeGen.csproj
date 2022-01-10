@@ -84,7 +84,7 @@
       <Version>13.0.1</Version>
     </PackageReference>
     <PackageReference Include="RestSharp">
-      <Version>106.12.0</Version>
+      <Version>107.0.2</Version>
     </PackageReference>
     <PackageReference Include="T4.FileManager.VisualStudio">
       <Version>1.0.1</Version>
