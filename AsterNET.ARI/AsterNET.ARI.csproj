@@ -174,7 +174,7 @@
       <Version>13.0.1</Version>
     </PackageReference>
     <PackageReference Include="RestSharp">
-      <Version>106.12.0</Version>
+      <Version>108.0.3</Version>
     </PackageReference>
     <PackageReference Include="WebSocket4Net">
       <Version>0.15.2</Version>
