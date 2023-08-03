@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace Arke.ARI.Middleware
 {
@@ -18,10 +19,8 @@ namespace Arke.ARI.Middleware
     public interface IActionConsumer
     {
         IRestCommand GetRestCommand(HttpMethod method, string path);
-        IRestCommandResult<T> ProcessRestCommand<T>(IRestCommand command) where T : new();
-        IRestCommandResult ProcessRestCommand(IRestCommand command);
-
-        Task<IRestCommandResult<T>> ProcessRestCommandAsync<T>(IRestCommand command) where T : new();
-        Task<IRestCommandResult> ProcessRestCommandAsync(IRestCommand command);
+        
+        Task<IRestCommandResult<T>> ProcessRestCommandAsync<T>(IRestCommand command, CancellationToken cancellationToken) where T : new();
+        Task<IRestCommandResult> ProcessRestCommandAsync(IRestCommand command, CancellationToken cancellationToken);
     }
 }

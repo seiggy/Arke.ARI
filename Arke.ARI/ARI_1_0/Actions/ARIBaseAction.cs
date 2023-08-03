@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using Arke.ARI.Middleware;
 
 namespace Arke.ARI
@@ -20,24 +21,14 @@ namespace Arke.ARI
 			return _consumer.GetRestCommand(method, requestString);
 		}
 
-		protected IRestCommandResult<T> Execute<T>(IRestCommand command) where T : new()
-		{
-			return _consumer.ProcessRestCommand<T>(command);
-		}
-
-		protected IRestCommandResult Execute(IRestCommand command)
-		{
-			return _consumer.ProcessRestCommand(command);
-		}
-
-        protected  async Task<IRestCommandResult<T>> ExecuteTask<T>(IRestCommand command) where T : new()
+        protected  async Task<IRestCommandResult<T>> ExecuteAsync<T>(IRestCommand command, CancellationToken cancellationToken = default) where T : new()
         {
-            return await _consumer.ProcessRestCommandAsync<T>(command);
+            return await _consumer.ProcessRestCommandAsync<T>(command, cancellationToken);
         }
 
-        protected async Task<IRestCommandResult> ExecuteTask(IRestCommand command)
+        protected async Task<IRestCommandResult> ExecuteAsync(IRestCommand command, CancellationToken cancellationToken = default)
         {
-            return await _consumer.ProcessRestCommandAsync(command);
+            return await _consumer.ProcessRestCommandAsync(command, cancellationToken);
         }
 	}
 }

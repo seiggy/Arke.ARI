@@ -1,63 +1,40 @@
 ﻿using System;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
-using RestSharp;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Arke.ARI.Middleware.Default
 {
     public class RestActionConsumer : IActionConsumer
     {
         private readonly StasisEndpoint _connectionInfo;
+        private readonly IServiceProvider _serviceProvider;
 
-        public RestActionConsumer(StasisEndpoint connectionInfo)
+        public RestActionConsumer(StasisEndpoint connectionInfo, IServiceProvider serviceProvider)
         {
             _connectionInfo = connectionInfo;
+            _serviceProvider = serviceProvider;
         }
 
         public IRestCommand GetRestCommand(HttpMethod method, string path)
         {
-            return new Command(_connectionInfo, path)
+            return new Command(_connectionInfo, path, _serviceProvider.GetService<IHttpClientFactory>(), _serviceProvider.GetService<ILogger<Command>>())
             {
                 UniqueId = Guid.NewGuid().ToString(),
-                Method = method.ToString()
+                Method = method
             };
         }
 
-        public IRestCommandResult<T> ProcessRestCommand<T>(IRestCommand command) where T : new()
+        public async Task<IRestCommandResult<T>> ProcessRestCommandAsync<T>(IRestCommand command, CancellationToken cancellationToken) where T : new()
         {
-            var cmd = (Command) command;
-            var result = cmd.Client.Execute<T>(cmd.Request);
-            
-            var rtn = new CommandResult<T> {StatusCode = result.StatusCode, Data = result.Data};
-            
-            return rtn;
+            return await command.ExecuteAsync<T>(cancellationToken);
         }
 
-        public IRestCommandResult ProcessRestCommand(IRestCommand command)
+        public async Task<IRestCommandResult> ProcessRestCommandAsync(IRestCommand command, CancellationToken cancellationToken)
         {
-            var cmd = (Command) command;
-            var result = cmd.Client.Execute(cmd.Request);
-            
-            var rtn = new CommandResult {StatusCode = result.StatusCode, RawData = result.RawBytes};
-            
-            return rtn;
-        }
-
-        public async Task<IRestCommandResult<T>> ProcessRestCommandAsync<T>(IRestCommand command) where T : new()
-        {
-            var cmd = (Command) command;
-            var result = await cmd.Client.ExecuteAsync<T>(cmd.Request);
-            var rtn = new CommandResult<T> {StatusCode = result.StatusCode, Data = result.Data};
-            
-            return rtn;
-        }
-
-        public async Task<IRestCommandResult> ProcessRestCommandAsync(IRestCommand command)
-        {
-            var cmd = (Command) command;
-            var result = await cmd.Client.ExecuteAsync(cmd.Request);
-            var rtn = new CommandResult {StatusCode = result.StatusCode, RawData = result.RawBytes};
-            
-            return rtn;
+            return await command.ExecuteAsync(cancellationToken);
         }
     }
 }

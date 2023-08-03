@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Arke.ARI.Dispatchers
 {
@@ -9,9 +10,10 @@ namespace Arke.ARI.Dispatchers
         {
         }
 
-        public void QueueAction(Action action)
+        public Task QueueAction(Action action)
         {
             ThreadPool.QueueUserWorkItem(_ => action());
+            return Task.CompletedTask;
         }
     }
 }

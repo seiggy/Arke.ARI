@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Arke.ARI.Dispatchers
 {
@@ -28,9 +29,10 @@ namespace Arke.ARI.Dispatchers
             _threadCancellation.Cancel();
         }
 
-        public void QueueAction(Action action)
+        public Task QueueAction(Action action)
         {
             _eventQueue.Add(action);
+            return Task.CompletedTask;
         }
 
         public void Dispose()

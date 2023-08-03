@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>Arke.ARI</AssemblyName>
     <RootNamespace>Arke.ARI</RootNamespace>
     <Version>2.0.1</Version>
@@ -18,7 +18,9 @@
     <RepositoryUrl>https://github.com/seiggy/arke.ari</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>Asterisk;ARI;telephony;sip</PackageTags>
-    <PackageReleaseNotes>v2.0.1
+    <PackageReleaseNotes>v3.0.0
+ Removing RestSharp
+v2.0.1
  Fixing RestSharp v107 case bug
 v2.0.0
  Migrating project fully to .NET Standard 2.0 as Microsoft no longer supports .NET Framework 4.5
@@ -51,8 +53,7 @@ v2.0.0
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="RestSharp" Version="110.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Threading.ThreadPool" Version="4.3.0" />
     <PackageReference Include="WebSocket4Net" Version="0.15.2" />

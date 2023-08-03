@@ -18,6 +18,8 @@
 using Arke.ARI.Models;
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Arke.ARI.SimpleBridgeAsync
 {
@@ -26,23 +28,29 @@ namespace Arke.ARI.SimpleBridgeAsync
         public static AriClient ActionClient;
         public static Bridge SimpleBridge;
 
-        private const string AppName = "bridge_test";
+        private const string AppName = "arke";
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            RunDemo().Wait();
+            HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+            builder.Services.AddLogging();
+            builder.Services.AddHttpClient();
+            using IHost host = builder.Build();
+            await RunDemo(host.Services);
+            await host.RunAsync();
         }
 
-        private static async Task RunDemo()
+        private static async Task RunDemo(IServiceProvider hostProvider)
         {
             try
             {
                 // Create a message actionClient to receive events on
-                ActionClient = new AriClient(new StasisEndpoint("192.168.3.16", 8088, "username", "test"), AppName);
+                ActionClient = new AriClient(new StasisEndpoint("192.168.1.132", 8088, AppName, "arke"), hostProvider, AppName);
 
                 ActionClient.EventDispatchingStrategy = EventDispatchingStrategy.AsyncTask;
                 ActionClient.OnStasisStartEvent += c_OnStasisStartEvent;
                 ActionClient.OnStasisEndEvent += c_OnStasisEndEvent;
+                ActionClient.OnChannelDtmfReceivedEvent += c_OnDtmfReceivedEvent;
 
                 ActionClient.Connect();
 
@@ -95,13 +103,46 @@ namespace Arke.ARI.SimpleBridgeAsync
             }
         }
 
+        private static async void c_OnDtmfReceivedEvent(IAriClient sender, ChannelDtmfReceivedEvent e)
+        {
+            switch (e.Digit)
+            {
+                case "*":
+                    break;
+                case "1":
+                    await ActionClient.Bridges.StopMohAsync(SimpleBridge.Id);
+                    break;
+                case "2":
+                    await ActionClient.Bridges.StartMohAsync(SimpleBridge.Id, "default");
+                    break;
+                case "3":
+                    // Mute all channels on bridge
+                    var bridgeMute = await ActionClient.Bridges.GetAsync(SimpleBridge.Id);
+                    foreach (var chan in bridgeMute.Channels)
+                        await ActionClient.Channels.MuteAsync(chan, "in");
+                    break;
+                case "4":
+                    // Unmute all channels on bridge
+                    var bridgeUnmute = await ActionClient.Bridges.GetAsync(SimpleBridge.Id);
+                    foreach (var chan in bridgeUnmute.Channels)
+                        await ActionClient.Channels.UnmuteAsync(chan, "in");
+                    break;
+            }
+        }
+
         static async void c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
         {
             // remove from bridge
-            await ActionClient.Bridges.RemoveChannelAsync(SimpleBridge.Id, e.Channel.Id);
-
-            // hangup
-            await ActionClient.Channels.HangupAsync(e.Channel.Id, "normal");
+            try
+            {
+                await ActionClient.Bridges.RemoveChannelAsync(SimpleBridge.Id, e.Channel.Id);
+                // hangup
+                await ActionClient.Channels.HangupAsync(e.Channel.Id, "normal");
+            }
+            catch (AriException ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
         }
 
         static async void c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)

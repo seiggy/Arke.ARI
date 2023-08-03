@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Text.Json;
 using System.Threading;
 using Arke.ARI.Actions;
 using Arke.ARI.Dispatchers;
 using Arke.ARI.Middleware;
 using Arke.ARI.Middleware.Default;
 using Arke.ARI.Models;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Arke.ARI
 {
@@ -44,6 +43,10 @@ namespace Arke.ARI
         private bool _autoReconnect;
         private TimeSpan _autoReconnectDelay;
         private IAriDispatcher _dispatcher;
+        private JsonSerializerOptions _serializerOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
 
         #endregion
 
@@ -75,16 +78,18 @@ namespace Arke.ARI
         /// <summary>
         /// </summary>
         /// <param name="endPoint"></param>
+        /// <param name="serviceProvider">An instance of IServiceProvider for DI. Used for getting ILogger instances, and IHttpClientFactory.</param>
         /// <param name="application"></param>
         /// <param name="subscribeAllEvents">Subscribe to all Asterisk events. If provided, the applications listed will be subscribed to all events, effectively disabling the application specific subscriptions.</param>
         /// <param name="ssl">Enable SSL/TLS support for ARI connection</param>
         public AriClient(
             StasisEndpoint endPoint,
+            IServiceProvider serviceProvider,
             string application,
             bool subscribeAllEvents = false,
             bool ssl = false)
             // Use Default Middleware
-            : this(new RestActionConsumer(endPoint), new WebSocketEventProducer(endPoint, application), application, subscribeAllEvents, ssl)
+            : this(new RestActionConsumer(endPoint, serviceProvider), new WebSocketEventProducer(endPoint, application), application, subscribeAllEvents, ssl)
         {
         }
 
@@ -117,6 +122,7 @@ namespace Arke.ARI
 
             _subscribeAllEvents = subscribeAllEvents;
             _ssl = ssl;
+            _serializerOptions.Converters.Add(new DateTimeConverterUsingDateTimeParse());
         }
 
         public void Dispose()
@@ -147,13 +153,13 @@ namespace Arke.ARI
             Debug.WriteLine(e.Message);
 #endif
             // load the message
-            var jsonMsg = (JObject)JToken.Parse(e.Message);
-            var eventName = jsonMsg.SelectToken("type").Value<string>();
+            var jsonMsg = JsonDocument.Parse(e.Message);
+            var eventName = jsonMsg.RootElement.GetProperty("type").GetString();
             var type = Type.GetType("Arke.ARI.Models." + eventName + "Event");
             var evnt =
                 (type != null)
-                    ? (Event)JsonConvert.DeserializeObject(e.Message, type)
-                    : (Event)JsonConvert.DeserializeObject(e.Message, typeof(Event));
+                    ? (Event)JsonSerializer.Deserialize(e.Message, type, _serializerOptions)
+                    : (Event)JsonSerializer.Deserialize(e.Message, typeof(Event), _serializerOptions);
 
             lock (_syncRoot)
             {

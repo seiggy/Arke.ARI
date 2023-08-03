@@ -13,7 +13,7 @@ namespace Arke.ARI.Dispatchers
 
         }
 
-        public async void QueueAction(Action action)
+        public async Task QueueAction(Action action)
         {
             await Task.Run(action);
         }
