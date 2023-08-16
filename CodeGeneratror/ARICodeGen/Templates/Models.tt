@@ -425,6 +425,7 @@ namespace Arke.ARI.Actions
 using System;
 using System.Collections.Generic;
 using Arke.ARI.Models;
+using System.Threading.Tasks;
 
 namespace Arke.ARI
 {
@@ -432,11 +433,11 @@ namespace Arke.ARI
 	foreach (var evt in events)
     {
 #>
-	public delegate void <#= evt + "Handler"#>(IAriClient sender, <#= evt #> e);
+	public delegate Task <#= evt + "Handler"#>(IAriClient sender, <#= evt #> e);
 <#
     }
 #>
-	public delegate void UnhandledEventHandler(object sender, Arke.ARI.Models.Event eventMessage);
+	public delegate Task UnhandledEventHandler(object sender, Arke.ARI.Models.Event eventMessage);
 
 
 	public interface IAriEventClient

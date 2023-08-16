@@ -2,11 +2,14 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using Arke.ARI.Actions;
 using Arke.ARI.Dispatchers;
 using Arke.ARI.Middleware;
 using Arke.ARI.Middleware.Default;
 using Arke.ARI.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Arke.ARI
 {
@@ -24,7 +27,7 @@ namespace Arke.ARI
     {
         public const EventDispatchingStrategy DefaultEventDispatchingStrategy = EventDispatchingStrategy.ThreadPool;
 
-        public delegate void ConnectionStateChangedHandler(object sender);
+        public delegate Task ConnectionStateChangedHandler(object sender);
 
         #region Events
 
@@ -36,6 +39,7 @@ namespace Arke.ARI
 
         private readonly IActionConsumer _actionConsumer;
         private readonly IEventProducer _eventProducer;
+        private readonly IServiceProvider _serviceProvider;
 
         private readonly object _syncRoot = new object();
         private readonly bool _subscribeAllEvents;
@@ -89,8 +93,11 @@ namespace Arke.ARI
             bool subscribeAllEvents = false,
             bool ssl = false)
             // Use Default Middleware
-            : this(new RestActionConsumer(endPoint, serviceProvider), new WebSocketEventProducer(endPoint, application), application, subscribeAllEvents, ssl)
+            : this(new RestActionConsumer(endPoint, serviceProvider), 
+                  new WebSocketEventProducer(endPoint, application, serviceProvider.GetRequiredService<ILogger<WebSocketEventProducer>>(), serviceProvider), 
+                  application, subscribeAllEvents, ssl)
         {
+            _serviceProvider = serviceProvider;
         }
 
         public AriClient(
@@ -130,7 +137,7 @@ namespace Arke.ARI
             _eventProducer.OnConnectionStateChanged -= _eventProducer_OnConnectionStateChanged;
             _eventProducer.OnMessageReceived -= _eventProducer_OnMessageReceived;
 
-            Disconnect();
+            Disconnect().Wait();
         }
 
         #endregion
@@ -138,28 +145,28 @@ namespace Arke.ARI
         #region Private and Protected Methods
 
 
-        private void _eventProducer_OnConnectionStateChanged(object sender, EventArgs e)
+        private async Task _eventProducer_OnConnectionStateChanged(IEventProducer sender)
         {
             if (_eventProducer.State != ConnectionState.Open)
-                Reconnect();
+                await Reconnect();
 
             if (OnConnectionStateChanged != null)
-                OnConnectionStateChanged(sender);
+                await OnConnectionStateChanged(sender);
         }
 
-        private void _eventProducer_OnMessageReceived(object sender, MessageEventArgs e)
+        private async Task _eventProducer_OnMessageReceived(IEventProducer sender, string message)
         {
 #if DEBUG
-            Debug.WriteLine(e.Message);
+            Debug.WriteLine(message);
 #endif
             // load the message
-            var jsonMsg = JsonDocument.Parse(e.Message);
+            var jsonMsg = JsonDocument.Parse(message);
             var eventName = jsonMsg.RootElement.GetProperty("type").GetString();
             var type = Type.GetType("Arke.ARI.Models." + eventName + "Event");
             var evnt =
                 (type != null)
-                    ? (Event)JsonSerializer.Deserialize(e.Message, type, _serializerOptions)
-                    : (Event)JsonSerializer.Deserialize(e.Message, typeof(Event), _serializerOptions);
+                    ? (Event)JsonSerializer.Deserialize(message, type, _serializerOptions)
+                    : (Event)JsonSerializer.Deserialize(message, typeof(Event), _serializerOptions);
 
             lock (_syncRoot)
             {
@@ -184,7 +191,7 @@ namespace Arke.ARI
             }
         }
 
-        private void Reconnect()
+        private async Task Reconnect()
         {
             TimeSpan reconnectDelay;
 
@@ -202,7 +209,7 @@ namespace Arke.ARI
 
             if (reconnectDelay != TimeSpan.Zero)
                 Thread.Sleep(reconnectDelay);
-            _eventProducer.Connect(_subscribeAllEvents, _ssl);
+            await _eventProducer.ConnectAsync(_subscribeAllEvents, _ssl);
         }
 
 
@@ -228,7 +235,7 @@ namespace Arke.ARI
             get { return _eventProducer.State == ConnectionState.Open; }
         }
 
-        public virtual void Connect(bool autoReconnect = true, int autoReconnectDelay = 5)
+        public virtual async Task Connect(bool autoReconnect = true, int autoReconnectDelay = 5)
         {
             lock (_syncRoot)
             {
@@ -238,10 +245,10 @@ namespace Arke.ARI
                     _dispatcher = CreateDispatcher();
             }
 
-            _eventProducer.Connect(_subscribeAllEvents, _ssl);
+            await _eventProducer.ConnectAsync(_subscribeAllEvents, _ssl);
         }
 
-        public virtual void Disconnect()
+        public virtual async Task Disconnect()
         {
             lock (_syncRoot)
             {
@@ -253,7 +260,7 @@ namespace Arke.ARI
                 }
             }
 
-            _eventProducer.Disconnect();
+            await _eventProducer.DisconnectAsync();
         }
 
         #endregion

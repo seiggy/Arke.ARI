@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Arke.ARI.Models;
-
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Arke.ARI.SimpleTestApplicationAsync
 {
@@ -8,14 +10,25 @@ namespace Arke.ARI.SimpleTestApplicationAsync
     {
         public static AriClient ActionClient;
 
-        private static void Main(string[] args)
+        static async Task Main(string[] args)
+        {
+            HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+            builder.Services.AddLogging();
+            builder.Services.AddHttpClient();
+            using IHost host = builder.Build();
+            await RunDemo(host.Services);
+            await host.RunAsync();
+        }
+
+        private static async Task RunDemo(IServiceProvider serviceProvider)
         {
             try
             {
                 // Create a new Ari Connection
                 ActionClient = new AriClient(
-                    new StasisEndpoint("192.168.3.201", 8088, "test", "test"),
-                    "HelloWorld");
+                    new StasisEndpoint("192.168.1.132", 8088, "arke", "arke"),
+                    serviceProvider,
+                    "arke");
 
                 // Hook into required events
                 ActionClient.OnStasisStartEvent += c_OnStasisStartEvent;
@@ -33,12 +46,12 @@ namespace Arke.ARI.SimpleTestApplicationAsync
             }
         }
 
-        private static void ActionClientOnConnectionStateChanged(object sender)
+        private static async Task ActionClientOnConnectionStateChanged(object sender)
         {
             Console.WriteLine("Connection state is now {0}", ActionClient.Connected);
         }
 
-        private async static void ActionClientOnChannelDtmfReceivedEvent(IAriClient sender, ChannelDtmfReceivedEvent e)
+        private static async Task ActionClientOnChannelDtmfReceivedEvent(IAriClient sender, ChannelDtmfReceivedEvent e)
         {
             // When DTMF received
             switch (e.Digit)
@@ -56,7 +69,7 @@ namespace Arke.ARI.SimpleTestApplicationAsync
             }
         }
 
-        private async static void c_OnStasisStartEvent(IAriClient sender, StasisStartEvent e)
+        private static async Task c_OnStasisStartEvent(IAriClient sender, StasisStartEvent e)
         {
             // Answer the channel
             await sender.Channels.AnswerAsync(e.Channel.Id);

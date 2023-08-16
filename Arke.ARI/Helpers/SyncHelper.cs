@@ -9,7 +9,7 @@ namespace Arke.ARI.Helpers
         {
             var playbackFinished = new AutoResetEvent(false);
             PlaybackFinishedEvent rtn = null;
-            client.OnPlaybackFinishedEvent += (s, e) =>
+            client.OnPlaybackFinishedEvent += async (s, e) =>
             {
                 rtn = e;
                 playbackFinished.Set();

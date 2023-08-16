@@ -1,5 +1,14 @@
+08.16.2023		seiggy
+	Updated	Refactored all events to return Task type for better async support.
+	Updated	Added ILogger dependency for better logging support coming. And added IHttpClient support. Using .NET DI solutions for both. Dependency on IServiceProvider.
+	Updated	All samples now use the new async code properly, and have been updated to use the new DI support. Retested all samples. Conference Web needs some more work down the road.
+	Removed	Newtonsoft.Json dependency
+	Removed	RestSharp dependency
+	Removed WebSocket4Net dependency
+
 07.19.2023		seiggy
 	Fixing case issue with RestSharp v107
+
 06.23.2023		seiggy
 	Migrating project fully to .NET Standard 2.0 as Microsoft no longer supports .NET Framework 4.5
 	Refactoring all classes to be virtualized in order to support better unit testing practices

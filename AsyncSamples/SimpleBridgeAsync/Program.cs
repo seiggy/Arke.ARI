@@ -52,7 +52,7 @@ namespace Arke.ARI.SimpleBridgeAsync
                 ActionClient.OnStasisEndEvent += c_OnStasisEndEvent;
                 ActionClient.OnChannelDtmfReceivedEvent += c_OnDtmfReceivedEvent;
 
-                ActionClient.Connect();
+                await ActionClient.Connect();
 
                 // Create simple bridge
                 SimpleBridge = await ActionClient.Bridges.CreateAsync("mixing", Guid.NewGuid().ToString(), AppName);
@@ -94,7 +94,7 @@ namespace Arke.ARI.SimpleBridgeAsync
                 }
 
                 await ActionClient.Bridges.DestroyAsync(SimpleBridge.Id);
-                ActionClient.Disconnect();
+                await ActionClient.Disconnect();
             }
             catch (Exception ex)
             {
@@ -103,7 +103,7 @@ namespace Arke.ARI.SimpleBridgeAsync
             }
         }
 
-        private static async void c_OnDtmfReceivedEvent(IAriClient sender, ChannelDtmfReceivedEvent e)
+        private static async Task c_OnDtmfReceivedEvent(IAriClient sender, ChannelDtmfReceivedEvent e)
         {
             switch (e.Digit)
             {
@@ -130,7 +130,7 @@ namespace Arke.ARI.SimpleBridgeAsync
             }
         }
 
-        static async void c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
+        static async Task c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
         {
             // remove from bridge
             try
@@ -145,7 +145,7 @@ namespace Arke.ARI.SimpleBridgeAsync
             }
         }
 
-        static async void c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)
+        static async Task c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)
         {
             // answer channel
             await ActionClient.Channels.AnswerAsync(e.Channel.Id);

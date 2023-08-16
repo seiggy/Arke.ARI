@@ -1,0 +1,30 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<table class="table table-striped">
+    <tr><td style="width: 1px;"></td><td><b>Conference</b></td><td><b>Options</b></td></tr>
+    <!-- ko foreach: confs -->
+    <tr>
+        <td></td>
+        <td><p><b data-bind="text: ConferenceName"></b></p><p data-bind="text: ConferenceId"></p></td>
+        <td>
+            <div class="btn-group">
+                <button type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Action
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" data-bind="click: $parent.muteConf">Mute</a>
+                    <a class="dropdown-item" data-bind="click: $parent.unmuteConf">Unmute</a>
+                    <a class="dropdown-item" data-bind="click: $parent.startMoh">Start MOH</a>
+                    <a class="dropdown-item" data-bind="click: $parent.stopMoh">Stop MOH</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" data-bind="click: $parent.destroy">Destroy</a>
+                </div>
+            </div>
+        </td>
+    </tr>
+    <!-- /ko -->
+</table>

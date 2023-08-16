@@ -1,26 +1,43 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System;
+using System.ComponentModel;
 using System.Net.Sockets;
-using SuperSocket.ClientEngine;
-using WebSocket4Net;
+using System.Net.WebSockets;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Arke.ARI.Middleware.Default
 {
-    public class WebSocketEventProducer : IEventProducer
+    public class WebSocketEventProducer : BackgroundService, IEventProducer
     {
+        private const int ReceiveChunkSize = 1024;
         private readonly string _application;
         private readonly StasisEndpoint _connectionInfo;
-        private WebSocket _client;
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly CancellationToken _cancellationToken;
+        private readonly ILogger<WebSocketEventProducer> _logger;
+        private readonly IServiceProvider _serviceProvider;
+        private ClientWebSocket _client;
         private WebSocketState _lastKnownState;
+        private Task _executingTask;
 
-        public event EventHandler<MessageEventArgs> OnMessageReceived;
-        public event EventHandler OnConnectionStateChanged;
+        public event MessageReceivedHandler OnMessageReceived;
+        public event ConnectionStateChangedHandler OnConnectionStateChanged;
 
         #region Constructor
 
-        public WebSocketEventProducer(StasisEndpoint connectionInfo, string application)
+        public WebSocketEventProducer(StasisEndpoint connectionInfo, string application, ILogger<WebSocketEventProducer> logger,
+            IServiceProvider serviceProvider)
         {
             _connectionInfo = connectionInfo;
             _application = application;
+            _cancellationTokenSource = new CancellationTokenSource();
+            _cancellationToken = _cancellationTokenSource.Token;
+            _logger = logger;
+            _serviceProvider = serviceProvider;
         }
 
         #endregion
@@ -41,32 +58,25 @@ namespace Arke.ARI.Middleware.Default
             get { return _client != null && _client.State == WebSocketState.Open; }
         }
 
-        public void Connect(bool subscribeAll = false, bool ssl = false)
+        public async Task ConnectAsync(bool subscribeAll = false, bool ssl = false)
         {
             try
             {
                 if (!ssl)
                 {
-                    _client = new WebSocket(string.Format("ws://{0}:{3}/ari/events?app={1}&subscribeAll={4}&api_key={2}",
-                        _connectionInfo.Host, _application,
-                        string.Format("{0}:{1}", _connectionInfo.Username, _connectionInfo.Password), _connectionInfo.Port, subscribeAll));
+                    _client = new ClientWebSocket();
+                    await _client.ConnectAsync(new Uri($"ws://{_connectionInfo.Host}:{_connectionInfo.Port}/ari/events?app={_application}&subscribeAll={subscribeAll}&api_key={$"{_connectionInfo.Username}:{_connectionInfo.Password}"}"), 
+                        CancellationToken.None);
                 }
                 else
                 {
-                    _client = new WebSocket(string.Format("wss://{0}:{3}/ari/events?app={1}&subscribeAll={4}&api_key={2}",
-                        _connectionInfo.Host, _application,
-                        string.Format("{0}:{1}", _connectionInfo.Username, _connectionInfo.Password), _connectionInfo.Port, subscribeAll),
-                        null, null, null, "", "", WebSocketVersion.None, null,
-                        System.Security.Authentication.SslProtocols.None, 0);
+                    _client = new ClientWebSocket();
+                    await _client.ConnectAsync(new Uri($"wss://{_connectionInfo.Host}:{_connectionInfo.Port}/ari/events?app={_application}&subscribeAll={subscribeAll}&api_key={$"{_connectionInfo.Username}:{_connectionInfo.Password}"}"),
+                        CancellationToken.None);
                 }
+                await CallOnConnected();
 
-                _client.MessageReceived += _client_MessageReceived;
-                _client.Opened += _client_Opened;
-                _client.Error += _client_Error;
-                _client.DataReceived += _client_DataReceived;
-                _client.Closed += _client_Closed;
-
-                _client.Open();
+                _executingTask = ExecuteAsync(_cancellationToken);
             }
             catch (Exception ex)
             {
@@ -75,49 +85,33 @@ namespace Arke.ARI.Middleware.Default
         }
 
 
-        public void Disconnect()
+        private async Task CallOnMessage(StringBuilder message)
+        {
+            if (OnMessageReceived != null)
+                await OnMessageReceived(this, message.ToString());
+        }
+
+        private async Task CallOnDisconnected(string message)
+        {
+            await OnConnectionStateChanged?.Invoke(this);
+        }
+
+        private async Task CallOnConnected()
+        {
+            if (OnConnectionStateChanged  != null)
+                await OnConnectionStateChanged(this);
+        }
+
+
+        public async Task DisconnectAsync()
         {
             if (_client != null)
-                _client.Close();
+                await _client.CloseAsync(WebSocketCloseStatus.NormalClosure, "Termination Requested", _cancellationToken);
         }
 
         #endregion
 
-        #region SocketEvents
-
-        private void _client_Closed(object sender, EventArgs e)
-        {
-            RaiseOnConnectionStateChanged();
-        }
-
-        private void _client_DataReceived(object sender, DataReceivedEventArgs e)
-        {
-        }
-
-        private void _client_Error(object sender, ErrorEventArgs e)
-        {
-            if (e.Exception is SocketException)
-                RaiseOnConnectionStateChanged();
-        }
-
-        private void _client_Opened(object sender, EventArgs e)
-        {
-            RaiseOnConnectionStateChanged();
-        }
-
-        private void _client_MessageReceived(object sender, MessageReceivedEventArgs e)
-        {
-            // Raise Event
-            var handler = OnMessageReceived;
-            if (handler != null)
-                handler(this, new MessageEventArgs
-                {
-                    Message = e.Message
-                });
-        }
-
-        #endregion
-
+        
         #region Private Methods
 
         protected virtual void RaiseOnConnectionStateChanged()
@@ -126,7 +120,54 @@ namespace Arke.ARI.Middleware.Default
 
             _lastKnownState = _client.State;
             var handler = OnConnectionStateChanged;
-            if (handler != null) handler(this, null);
+            if (handler != null) handler(this);
+        }
+
+        public override async Task StopAsync(CancellationToken cancellationToken)
+        {
+            await DisconnectAsync();
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            var buffer = new byte[ReceiveChunkSize];
+
+            try
+            {
+                using var scope = _serviceProvider.CreateAsyncScope();
+                while (_client.State == WebSocketState.Open && !stoppingToken.IsCancellationRequested)
+                {
+                    var stringResult = new StringBuilder();
+                    WebSocketReceiveResult result;
+
+                    do
+                    {
+                        result = await _client.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationToken);
+
+                        if (result.MessageType == WebSocketMessageType.Close)
+                        {
+                            await _client.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                            await CallOnDisconnected(null);
+                        }
+                        else
+                        {
+                            var str = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                            stringResult.Append(str);
+                        }
+                    } while (!result.EndOfMessage);
+
+                    await CallOnMessage(stringResult);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error while listening for websocket messages: {0}", ex);
+                await CallOnDisconnected(ex.Message);
+            }
+            finally
+            {
+                _client.Dispose();
+            }
         }
 
         #endregion

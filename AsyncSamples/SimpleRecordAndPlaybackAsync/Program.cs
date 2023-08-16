@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Arke.ARI;
 using Arke.ARI.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace SimpleRecordAndPlaybackAsync
 {
@@ -20,7 +23,6 @@ namespace SimpleRecordAndPlaybackAsync
     class Program
     {
         public static AriClient actionClient;
-        public static StasisEndpoint endPoint;
 
         public static RecordingToChannel recording;
 
@@ -30,14 +32,22 @@ namespace SimpleRecordAndPlaybackAsync
             public Channel Channel { get; set; }
         }
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
+            HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+            builder.Services.AddLogging();
+            builder.Services.AddHttpClient();
+            using IHost host = builder.Build();
+            await RunDemo(host.Services);
+            await host.RunAsync();
+        }
+
+        private static async Task RunDemo(IServiceProvider serviceProvider)
+        { 
             try
             {
-                endPoint = new StasisEndpoint("ipaddress", 8088, "username", "password");
-
                 // Create a message actionClient to receive events on
-                actionClient = new AriClient(endPoint, "playrec_test");
+                actionClient = new AriClient(new StasisEndpoint("192.168.1.132", 8088, "arke", "arke"), serviceProvider, "arke");
 
                 actionClient.OnStasisStartEvent += c_OnStasisStartEvent;
                 actionClient.OnStasisEndEvent += c_OnStasisEndEvent;
@@ -66,45 +76,45 @@ namespace SimpleRecordAndPlaybackAsync
             }
         }
 
-        static void GetRecording(Channel c)
+        static async Task GetRecording(Channel c)
         {
-            var playback = actionClient.Channels.Play(c.Id, "sound:vm-rec-name", "en", 0, 0, Guid.NewGuid().ToString()).Id;
+            var playback = await actionClient.Channels.PlayAsync(c.Id, "sound:vm-rec-name", "en", 0, 0, Guid.NewGuid().ToString());
             recording = new RecordingToChannel()
             {
-                Recording = actionClient.Channels.Record(c.Id, "temp-recording", "wav", 6, 1, "overwrite", true, "#"),
+                Recording = await actionClient.Channels.RecordAsync(c.Id, "temp-recording", "wav", 6, 1, "overwrite", true, "#"),
                 Channel = c
             };
         }
 
-        static void PlaybackRecording(Channel c)
+        static async Task PlaybackRecording(Channel c)
         {
-            var repeat = actionClient.Channels.Play(c.Id, "recording:temp-recording", "en", 0, 0, Guid.NewGuid().ToString()).Id;
+            var repeat = await actionClient.Channels.PlayAsync(c.Id, "recording:temp-recording", "en", 0, 0, Guid.NewGuid().ToString());
         }
 
-        static void ActionClientOnRecordingFinishedEvent(object sender, Arke.ARI.Models.RecordingFinishedEvent e)
+        static async Task ActionClientOnRecordingFinishedEvent(object sender, Arke.ARI.Models.RecordingFinishedEvent e)
         {
             if (e.Recording.Name != recording.Recording.Name) return;
 
-            PlaybackRecording(recording.Channel);
+            await PlaybackRecording(recording.Channel);
 
-            GetRecording(recording.Channel);
+            await GetRecording(recording.Channel);
         }
 
-        static void c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
+        static async Task c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
         {
             // Delete recording
-            actionClient.Recordings.DeleteStored("temp-recording");
+            await actionClient.Recordings.DeleteStoredAsync("temp-recording");
 
             // hangup
-            actionClient.Channels.Hangup(e.Channel.Id, "normal");
+            await actionClient.Channels.HangupAsync(e.Channel.Id, "normal");
         }
 
-        static void c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)
+        static async Task c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)
         {
             // answer channel
-            actionClient.Channels.Answer(e.Channel.Id);
+            await actionClient.Channels.AnswerAsync(e.Channel.Id);
 
-            GetRecording(e.Channel);
+            await GetRecording(e.Channel);
         }
     }
 }

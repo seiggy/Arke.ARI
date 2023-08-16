@@ -4,7 +4,9 @@ using Arke.ARI;
 using Arke.ARI.Models;
 using SimpleConfAsync.REST;
 using System.Linq;
-using Microsoft.Owin.Hosting;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SimpleConfAsync
 {
@@ -18,17 +20,23 @@ namespace SimpleConfAsync
     {
         public static AriClient Client;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            RunDemo();
+            HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+            builder.Services.AddLogging();
+            builder.Services.AddHttpClient();
+            using IHost host = builder.Build();
+            await RunDemo(host.Services);
+            await host.RunAsync();
         }
 
-        private static void RunDemo()
+        private static async Task RunDemo(IServiceProvider serviceProvider)
         {
             try
             {
                 Client = new AriClient(
                     new StasisEndpoint("127.0.0.1", 8088, "username", "test"), 
+                    serviceProvider,
                     AppConfig.AppName);
 
                 Conference.Conferences.Add(new Conference(Client, Guid.NewGuid(), "test"));

@@ -1,5 +1,8 @@
-﻿using System;
-using WebSocket4Net;
+﻿using Arke.ARI.Middleware.Default;
+using System;
+using System.Net.WebSockets;
+using System.Threading.Tasks;
+using static Arke.ARI.Middleware.Default.WebSocketEventProducer;
 
 namespace Arke.ARI.Middleware
 {
@@ -8,7 +11,7 @@ namespace Arke.ARI.Middleware
         None = WebSocketState.None,
         Connecting = WebSocketState.Connecting,
         Open = WebSocketState.Open,
-        Closing = WebSocketState.Closing,
+        Closing = WebSocketState.CloseReceived | WebSocketState.CloseSent,
         Closed = WebSocketState.Closed
     }
 
@@ -17,13 +20,16 @@ namespace Arke.ARI.Middleware
         public string Message;
     }
 
+    public delegate Task MessageReceivedHandler(IEventProducer sender, string message);
+    public delegate Task ConnectionStateChangedHandler(IEventProducer sender);
+
     public interface IEventProducer
     {
         ConnectionState State { get; }
-        event EventHandler<MessageEventArgs> OnMessageReceived;
-        event EventHandler OnConnectionStateChanged;
+        event MessageReceivedHandler OnMessageReceived;
+        event ConnectionStateChangedHandler OnConnectionStateChanged;
 
-        void Connect(bool subscribeAll = false, bool ssl = false);
-        void Disconnect();
+        Task ConnectAsync(bool subscribeAll = false, bool ssl = false);
+        Task DisconnectAsync();
     }
 }
