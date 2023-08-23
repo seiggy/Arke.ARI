@@ -25,6 +25,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleTestApplicationAsync"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleConferenceWeb", "AsyncSamples\SimpleConferenceWeb\SimpleConferenceWeb.csproj", "{DE7C2189-0D18-4A56-9385-2B0436B70BF2}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AudioTranscriptionSample", "Samples\AudioTranscriptionSample\AudioTranscriptionSample.csproj", "{0857F2E0-9824-4C93-95B2-6D565D64B8DA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Arke.ARI.ExternalMedia", "Arke.ARI.ExternalMedia\Arke.ARI.ExternalMedia.csproj", "{7FE62876-7C53-418C-9D0D-552115A3C4DB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,6 +58,14 @@ Global
 		{DE7C2189-0D18-4A56-9385-2B0436B70BF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DE7C2189-0D18-4A56-9385-2B0436B70BF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DE7C2189-0D18-4A56-9385-2B0436B70BF2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0857F2E0-9824-4C93-95B2-6D565D64B8DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0857F2E0-9824-4C93-95B2-6D565D64B8DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0857F2E0-9824-4C93-95B2-6D565D64B8DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0857F2E0-9824-4C93-95B2-6D565D64B8DA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FE62876-7C53-418C-9D0D-552115A3C4DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FE62876-7C53-418C-9D0D-552115A3C4DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FE62876-7C53-418C-9D0D-552115A3C4DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FE62876-7C53-418C-9D0D-552115A3C4DB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -64,6 +76,7 @@ Global
 		{DEE23389-A37D-484F-BB35-E63CF7977C7E} = {31012840-0DA0-4F79-8C4E-952D1422DD0A}
 		{55979546-152E-4157-9AA3-839F6E3CE4E8} = {31012840-0DA0-4F79-8C4E-952D1422DD0A}
 		{DE7C2189-0D18-4A56-9385-2B0436B70BF2} = {31012840-0DA0-4F79-8C4E-952D1422DD0A}
+		{0857F2E0-9824-4C93-95B2-6D565D64B8DA} = {31012840-0DA0-4F79-8C4E-952D1422DD0A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E3F439EE-D9DC-4A93-BE24-4B0D4299288D}
