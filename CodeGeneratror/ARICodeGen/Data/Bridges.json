@@ -30,7 +30,7 @@
           "parameters": [
             {
               "name": "type",
-              "description": "Comma separated list of bridge type attributes (mixing, holding, dtmf_events, proxy_media, video_sfu, video_single).",
+              "description": "Comma separated list of bridge type attributes (mixing, holding, dtmf_events, proxy_media, video_sfu).",
               "paramType": "query",
               "required": false,
               "allowMultiple": false,
@@ -69,7 +69,7 @@
           "parameters": [
             {
               "name": "type",
-              "description": "Comma separated list of bridge type attributes (mixing, holding, dtmf_events, proxy_media, video_sfu, video_single) to set.",
+              "description": "Comma separated list of bridge type attributes (mixing, holding, dtmf_events, proxy_media, video_sfu) to set.",
               "paramType": "query",
               "required": false,
               "allowMultiple": false,
@@ -457,6 +457,7 @@
                 "valueType": "RANGE",
                 "min": 0
               }
+
             },
             {
               "name": "skipms",
@@ -573,6 +574,7 @@
               "reason": "Bridge not in a Stasis application"
             }
           ]
+
         }
       ]
     },
@@ -753,7 +755,7 @@
         },
         "video_mode": {
           "type": "string",
-          "description": "The video mode the bridge is using. One of 'none', 'talker', 'sfu', or 'single'.",
+          "description": "The video mode the bridge is using. One of 'none', 'talker', or 'single'.",
           "required": false
         },
         "video_source_id": {
