@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>Arke.ARI.SourceGenerator</PackageId>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Authors>Arke ARI Team</Authors>
+    <Description>Source generator for Arke.ARI library</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.5.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="System.Text.Json" Version="6.0.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Applications.json" />
+    <EmbeddedResource Include="Resources\Asterisk.json" />
+    <EmbeddedResource Include="Resources\Bridges.json" />
+    <EmbeddedResource Include="Resources\Channels.json" />
+    <EmbeddedResource Include="Resources\DeviceStates.json" />
+    <EmbeddedResource Include="Resources\Endpoints.json" />
+    <EmbeddedResource Include="Resources\Events.json" />
+    <EmbeddedResource Include="Resources\Mailboxes.json" />
+    <EmbeddedResource Include="Resources\Playbacks.json" />
+    <EmbeddedResource Include="Resources\Recordings.json" />
+    <EmbeddedResource Include="Resources\Sounds.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" />
+  </ItemGroup>
+
+</Project>
