@@ -26,7 +26,7 @@ namespace Arke.ARI.SimpleTestApplicationAsync
             {
                 // Create a new Ari Connection
                 ActionClient = new AriClient(
-                    new StasisEndpoint("192.168.1.132", 8088, "arke", "arke"),
+                    new StasisEndpoint("192.168.1.165", 8088, "asterisk", "asterisk"),
                     serviceProvider,
                     "arke");
 
