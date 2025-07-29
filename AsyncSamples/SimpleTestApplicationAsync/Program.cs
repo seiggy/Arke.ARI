@@ -3,12 +3,14 @@ using System.Threading.Tasks;
 using Arke.ARI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Arke.ARI.SimpleTestApplicationAsync
 {
     internal class Program
     {
         public static AriClient ActionClient;
+        private static IServiceProvider _serviceProvider;
 
         static async Task Main(string[] args)
         {
@@ -16,15 +18,20 @@ namespace Arke.ARI.SimpleTestApplicationAsync
             builder.Services.AddLogging();
             builder.Services.AddHttpClient();
             using IHost host = builder.Build();
+            _serviceProvider = host.Services;
             await RunDemo(host.Services);
             await host.RunAsync();
         }
 
         private static async Task RunDemo(IServiceProvider serviceProvider)
         {
+            var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+
             try
             {
-                // Create a new Ari Connection
+                logger.LogInformation("Starting ARI Demo Application");
+
+                // Create a new Ari Connection with the new Asterisk environment
                 ActionClient = new AriClient(
                     new StasisEndpoint("192.168.1.165", 8088, "asterisk", "asterisk"),
                     serviceProvider,
@@ -35,24 +42,31 @@ namespace Arke.ARI.SimpleTestApplicationAsync
                 ActionClient.OnChannelDtmfReceivedEvent += ActionClientOnChannelDtmfReceivedEvent;
                 ActionClient.OnConnectionStateChanged += ActionClientOnConnectionStateChanged;
 
+                logger.LogInformation("Connecting to Asterisk ARI...");
                 ActionClient.Connect();
 
+                logger.LogInformation("Demo application running. Press any key to exit.");
                 Console.ReadKey();
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                logger.LogError(ex, "Error in demo application");
+                Console.WriteLine($"Error: {ex.Message}");
                 Console.ReadKey();
             }
         }
 
         private static async Task ActionClientOnConnectionStateChanged(object sender)
         {
-            Console.WriteLine("Connection state is now {0}", ActionClient.Connected);
+            var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Connection state is now {Connected}", ActionClient.Connected);
         }
 
         private static async Task ActionClientOnChannelDtmfReceivedEvent(IAriClient sender, ChannelDtmfReceivedEvent e)
         {
+            var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("DTMF received: {Digit} on channel {ChannelId}", e.Digit, e.Channel.Id);
+
             // When DTMF received
             switch (e.Digit)
             {
@@ -71,6 +85,9 @@ namespace Arke.ARI.SimpleTestApplicationAsync
 
         private static async Task c_OnStasisStartEvent(IAriClient sender, StasisStartEvent e)
         {
+            var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Stasis start event received for channel {ChannelId}", e.Channel.Id);
+
             // Answer the channel
             await sender.Channels.AnswerAsync(e.Channel.Id);
 

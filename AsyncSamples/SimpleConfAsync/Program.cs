@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace SimpleConfAsync
 {
@@ -19,6 +20,7 @@ namespace SimpleConfAsync
     internal class Program
     {
         public static AriClient Client;
+        private static IServiceProvider _serviceProvider;
 
         static async Task Main(string[] args)
         {
@@ -26,16 +28,21 @@ namespace SimpleConfAsync
             builder.Services.AddLogging();
             builder.Services.AddHttpClient();
             using IHost host = builder.Build();
+            _serviceProvider = host.Services;
             await RunDemo(host.Services);
             await host.RunAsync();
         }
 
         private static async Task RunDemo(IServiceProvider serviceProvider)
         {
+            var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+            
             try
             {
+                logger.LogInformation("Starting Simple Conference Demo Application");
+                
                 Client = new AriClient(
-                    new StasisEndpoint("127.0.0.1", 8088, "username", "test"), 
+                    new StasisEndpoint("192.168.1.165", 8088, "asterisk", "asterisk"), 
                     serviceProvider,
                     AppConfig.AppName);
 
@@ -44,11 +51,12 @@ namespace SimpleConfAsync
                 Client.OnStasisStartEvent += c_OnStasisStartEvent;
                 Client.OnStasisEndEvent += c_OnStasisEndEvent;
 
+                logger.LogInformation("Connecting to Asterisk ARI...");
                 Client.Connect();
 
                 // Start REST
                 WebApp.Start<Startup>(url: AppConfig.RestAddress);
-                Console.WriteLine("Loaded...waiting for connections.");
+                logger.LogInformation("Conference demo loaded and waiting for connections at {RestAddress}", AppConfig.RestAddress);
 
                 // Wait
                 Console.ReadKey();
@@ -56,16 +64,22 @@ namespace SimpleConfAsync
                 // Destroy all the conferences and their bridges
                 Conference.Conferences.ForEach(async x => await x.DestroyConference());
                 Conference.Conferences = null;
+                
+                logger.LogInformation("Conference demo completed");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                logger.LogError(ex, "Error in conference demo application");
+                Console.WriteLine($"Error: {ex.Message}");
                 Console.ReadKey();
             }
         }
 
         private static async void c_OnStasisEndEvent(object sender, StasisEndEvent e)
         {
+            var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Stasis end event for channel {ChannelId}", e.Channel.Id);
+            
             if (e.Application != AppConfig.AppName) return;
 
             var conf = Conference.Conferences.SingleOrDefault(x => x.ConferenceUsers.Any(c => c.Channel.Id == e.Channel.Id));
@@ -76,6 +90,9 @@ namespace SimpleConfAsync
 
         private static async void c_OnStasisStartEvent(object sender, StasisStartEvent e)
         {
+            var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Stasis start event for channel {ChannelId}", e.Channel.Id);
+            
             if (e.Application != AppConfig.AppName) return;
             var failed = true;
             if (e.Args.Count == 0)
@@ -90,7 +107,7 @@ namespace SimpleConfAsync
                 await Client.Channels.SetChannelVarAsync(e.Channel.Id, "CONFEXIT", "CANTJOIN");
             else
             {
-                Debug.Print("Added channel {0} to {1}", e.Channel.Id, confId);
+                logger.LogInformation("Added channel {ChannelId} to conference {ConferenceId}", e.Channel.Id, confId);
                 failed = false;
             }
 
