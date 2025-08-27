@@ -2,8 +2,11 @@ using System;
 using System.Threading.Tasks;
 using Arke.ARI;
 using Arke.ARI.Models;
+using Arke.ARI.WebSocket;
+using Arke.ARI.WebSocket.Dispatchers;
 using FakeItEasy;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
@@ -31,6 +34,20 @@ namespace Arke.ARI.Tests
                 builder.SetMinimumLevel(LogLevel.Debug);
             });
             services.AddHttpClient();
+
+            var clientOptions = new ARIClientOptions
+            {
+                BaseUrl = "http://192.168.1.165:8088/ari",
+                Username = "asterisk",
+                Password = "asterisk",
+                ApplicationName = "integration-test",
+                SubscribeAllEvents = true,
+                ReconnectDelay = TimeSpan.FromSeconds(5).Milliseconds,
+                MaxReconnectAttempts = 5
+            };
+            services.AddTransient<ARIClientOptions>(_ => clientOptions);
+            services.AddTransient<IDispatcher, AsyncTaskDispatcher>();
+            services.AddTransient<IEventProducer, WebSocketEventProducer>();
 
             ServiceProvider = services.BuildServiceProvider();
             Logger = ServiceProvider.GetRequiredService<ILogger<TestBase>>();

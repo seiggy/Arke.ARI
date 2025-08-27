@@ -1,24 +1,14 @@
-﻿using System;
+using System;
 
-namespace Arke.ARI
+namespace Arke.ARI;
+
+/// <inheritdoc />
+public class AriException : Exception
 {
-    /// <summary>
-    ///     An excpetion within the ARI framework
-    /// </summary>
-    public class AriException : Exception
+    public int StatusCode { get; }
+
+    public AriException(int statusCode, string message) : base(message)
     {
-
-        public int StatusCode { get; set; }
-
-        public AriException(string message)
-            : base(message)
-        {
-        }
-
-        public AriException(string message, int statusCode)
-            : base(message)
-        {
-            StatusCode = statusCode;
-        }
+        StatusCode = statusCode;
     }
 }

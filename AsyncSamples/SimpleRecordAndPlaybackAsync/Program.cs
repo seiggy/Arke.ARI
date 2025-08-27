@@ -1,10 +1,12 @@
-﻿using System;
-using System.Threading.Tasks;
-using Arke.ARI;
+﻿using Arke.ARI;
 using Arke.ARI.Models;
+using Arke.ARI.WebSocket;
+using Arke.ARI.WebSocket.Dispatchers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
 
 namespace SimpleRecordAndPlaybackAsync
 {
@@ -27,6 +29,7 @@ namespace SimpleRecordAndPlaybackAsync
         private static IServiceProvider _serviceProvider;
 
         public static RecordingToChannel recording;
+        private const string AppName = "integration-test";
 
         public class RecordingToChannel
         {
@@ -39,6 +42,13 @@ namespace SimpleRecordAndPlaybackAsync
             HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
             builder.Services.AddLogging();
             builder.Services.AddHttpClient();
+            builder.Services.AddAriWebSocketWithDispatcher<AsyncTaskDispatcher>((options) =>
+            {
+                options.ApplicationName = AppName;
+                options.BaseUrl = "http://192.168.1.165:8088/ari";
+                options.Username = "asterisk";
+                options.Password = "asterisk";
+            });
             using IHost host = builder.Build();
             _serviceProvider = host.Services;
             await RunDemo(host.Services);
@@ -54,14 +64,14 @@ namespace SimpleRecordAndPlaybackAsync
                 logger.LogInformation("Starting Record and Playback Demo Application");
 
                 // Create a message actionClient to receive events on with the new Asterisk environment
-                actionClient = new AriClient(new StasisEndpoint("192.168.1.165", 8088, "asterisk", "asterisk"), serviceProvider, "arke");
+                actionClient = new AriClient(new StasisEndpoint("192.168.1.165", 8088, "asterisk", "asterisk"), serviceProvider, AppName);
 
                 actionClient.OnStasisStartEvent += c_OnStasisStartEvent;
                 actionClient.OnStasisEndEvent += c_OnStasisEndEvent;
                 actionClient.OnRecordingFinishedEvent += ActionClientOnRecordingFinishedEvent;
 
                 logger.LogInformation("Connecting to Asterisk ARI...");
-                actionClient.Connect();
+                await actionClient.Connect(true);
 
                 logger.LogInformation("Record and Playback demo running. Press * to exit.");
 
@@ -77,7 +87,7 @@ namespace SimpleRecordAndPlaybackAsync
                     }
                 }
 
-                actionClient.Disconnect();
+                await actionClient.Disconnect();
                 logger.LogInformation("Record and Playback demo completed");
             }
             catch (Exception ex)
@@ -109,7 +119,7 @@ namespace SimpleRecordAndPlaybackAsync
             var repeat = await actionClient.Channels.PlayAsync(c.Id, "recording:temp-recording", "en", 0, 0, Guid.NewGuid().ToString());
         }
 
-        static async Task ActionClientOnRecordingFinishedEvent(object sender, Arke.ARI.Models.RecordingFinishedEvent e)
+        static async void ActionClientOnRecordingFinishedEvent(object sender, Arke.ARI.Models.RecordingFinishedEvent e)
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Recording finished: {RecordingName}", e.Recording.Name);
@@ -121,7 +131,7 @@ namespace SimpleRecordAndPlaybackAsync
             await GetRecording(recording.Channel);
         }
 
-        static async Task c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
+        static async void c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Stasis end event for channel {ChannelId}", e.Channel.Id);
@@ -133,7 +143,7 @@ namespace SimpleRecordAndPlaybackAsync
             await actionClient.Channels.HangupAsync(e.Channel.Id, "normal");
         }
 
-        static async Task c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)
+        static async void c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Stasis start event for channel {ChannelId}", e.Channel.Id);

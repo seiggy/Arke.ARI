@@ -1,19 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System;
 using System.Threading.Tasks;
 
 namespace Arke.ARI.Dispatchers
 {
-    sealed class AsyncDispatcher : IAriDispatcher
+    public sealed class AsyncDispatcher : IAriDispatcher
     {
         public void Dispose()
         {
 
         }
 
-        public async Task QueueAction(Action action)
+        public async void QueueAction(Action action)
+        {
+            await Task.Run(action);
+        }
+
+        public async Task QueueActionAsync(Func<Task> action)
         {
             await Task.Run(action);
         }

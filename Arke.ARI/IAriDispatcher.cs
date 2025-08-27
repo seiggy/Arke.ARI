@@ -5,6 +5,7 @@ namespace Arke.ARI
 {
     interface IAriDispatcher : IDisposable
     {
-        Task QueueAction(Action action);
+        void QueueAction(Action action);
+        Task QueueActionAsync(Func<Task> action);
     }
 }

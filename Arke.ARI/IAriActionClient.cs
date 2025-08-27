@@ -1,19 +1,19 @@
-﻿using Arke.ARI.Actions;
+using Arke.ARI.Actions;
 
 namespace Arke.ARI
 {
     public interface IAriActionClient
     {
-        IAsteriskActions Asterisk { get; set; }
-        IApplicationsActions Applications { get; set; }
-        IBridgesActions Bridges { get; set; }
-        IChannelsActions Channels { get; set; }
-        IDeviceStatesActions DeviceStates { get; set; }
-        IEndpointsActions Endpoints { get; set; }
-        IEventsActions Events { get; set; }
-        IMailboxesActions Mailboxes { get; set; }
-        IPlaybacksActions Playbacks { get; set; }
-        IRecordingsActions Recordings { get; set; }
-        ISoundsActions Sounds { get; set; }
+        public IAsteriskActions Asterisk { get; }
+        public IApplicationsActions Applications { get; }
+        public IBridgesActions Bridges { get; }
+        public IChannelsActions Channels { get; }
+        public IDeviceStatesActions DeviceStates { get; }
+        public IEndpointsActions Endpoints { get; }
+        public IEventsActions Events { get; }
+        public IMailboxesActions Mailboxes { get; }
+        public IPlaybacksActions Playbacks { get; }
+        public IRecordingsActions Recordings { get; }
+        public ISoundsActions Sounds { get; }
     }
 }

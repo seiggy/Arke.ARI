@@ -1,177 +1,166 @@
-﻿using System;
-using System.Diagnostics;
-using System.Text.Json;
-using System.Threading;
+using System;
+using System.Net.Http;
 using System.Threading.Tasks;
+using System.Net.Http.Json;
 using Arke.ARI.Actions;
-using Arke.ARI.Dispatchers;
-using Arke.ARI.Middleware;
-using Arke.ARI.Middleware.Default;
-using Arke.ARI.Models;
+using Arke.ARI.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
+using Arke.ARI.Models;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Arke.ARI.Dispatchers;
 
 namespace Arke.ARI
 {
-    public enum EventDispatchingStrategy
+    public class AriClient : BaseAriClient, IAriClient, IDisposable, IAsyncDisposable
     {
-        // Note that dispatching events on the thread pool implies that events might be processed out of order.
-        ThreadPool,
-        DedicatedThread,
-        AsyncTask
-    }
-
-    /// <summary>
-    /// </summary>
-    public class AriClient : BaseAriClient, IDisposable, IAriClient
-    {
-        public const EventDispatchingStrategy DefaultEventDispatchingStrategy = EventDispatchingStrategy.ThreadPool;
-
-        public delegate Task ConnectionStateChangedHandler(object sender);
-
-        #region Events
-
-        public event ConnectionStateChangedHandler OnConnectionStateChanged;
-
-        #endregion
-
-        #region Private Fields
-
-        private readonly IActionConsumer _actionConsumer;
+        private readonly HttpClient _http;
         private readonly IEventProducer _eventProducer;
-        private readonly IServiceProvider _serviceProvider;
-
         private readonly object _syncRoot = new object();
+        private bool _disposed;
         private readonly bool _subscribeAllEvents;
-        private readonly bool _ssl;
-        private bool _autoReconnect;
-        private TimeSpan _autoReconnectDelay;
-        private IAriDispatcher _dispatcher;
-        private JsonSerializerOptions _serializerOptions = new JsonSerializerOptions
+        private readonly string _application;
+        private IAriDispatcher? _dispatcher;
+        private ILogger? _logger;
+        private bool _ssl;
+        private StasisEndpoint _endPoint;
+
+        public AriClient(StasisEndpoint endPoint, IServiceProvider serviceProvider, string application)
+            : this(endPoint, serviceProvider, application, false, false)
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
-
-        #endregion
-
-        #region Public Properties
-
-        public IAsteriskActions Asterisk { get; set; }
-        public IApplicationsActions Applications { get; set; }
-        public IBridgesActions Bridges { get; set; }
-        public IChannelsActions Channels { get; set; }
-        public IDeviceStatesActions DeviceStates { get; set; }
-        public IEndpointsActions Endpoints { get; set; }
-        public IEventsActions Events { get; set; }
-        public IMailboxesActions Mailboxes { get; set; }
-        public IPlaybacksActions Playbacks { get; set; }
-        public IRecordingsActions Recordings { get; set; }
-        public ISoundsActions Sounds { get; set; }
-
-        public ConnectionState ConnectionState
-        {
-            get { return _eventProducer.State; }
         }
 
-        public EventDispatchingStrategy EventDispatchingStrategy { get; set; }
-
-        #endregion
-
-        #region Constructor
-
-        /// <summary>
-        /// </summary>
-        /// <param name="endPoint"></param>
-        /// <param name="serviceProvider">An instance of IServiceProvider for DI. Used for getting ILogger instances, and IHttpClientFactory.</param>
-        /// <param name="application"></param>
-        /// <param name="subscribeAllEvents">Subscribe to all Asterisk events. If provided, the applications listed will be subscribed to all events, effectively disabling the application specific subscriptions.</param>
-        /// <param name="ssl">Enable SSL/TLS support for ARI connection</param>
-        public AriClient(
-            StasisEndpoint endPoint,
-            IServiceProvider serviceProvider,
-            string application,
-            bool subscribeAllEvents = false,
-            bool ssl = false)
-            // Use Default Middleware
-            : this(new RestActionConsumer(endPoint, serviceProvider), 
-                  new WebSocketEventProducer(endPoint, application, serviceProvider.GetRequiredService<ILogger<WebSocketEventProducer>>(), serviceProvider), 
-                  application, subscribeAllEvents, ssl)
+        public AriClient(StasisEndpoint endPoint, IServiceProvider serviceProvider, string application, bool subscribeAllEvents, bool ssl)
         {
-            _serviceProvider = serviceProvider;
-        }
+            if (endPoint == null) throw new ArgumentNullException(nameof(endPoint));
+            if (serviceProvider == null) throw new ArgumentNullException(nameof(serviceProvider));
+            if (string.IsNullOrWhiteSpace(application)) throw new ArgumentException("application", nameof(application));
+            _application = application;
 
-        public AriClient(
-            IActionConsumer actionConsumer,
-            IEventProducer eventProducer,
-            string application,
-            bool subscribeAllEvents = false,
-            bool ssl = false)
-        {
-            _actionConsumer = actionConsumer;
-            _eventProducer = eventProducer;
-            EventDispatchingStrategy = DefaultEventDispatchingStrategy;
-
-            // Setup Action Properties
-            Asterisk = new AsteriskActions(_actionConsumer);
-            Applications = new ApplicationsActions(_actionConsumer);
-            Bridges = new BridgesActions(_actionConsumer);
-            Channels = new ChannelsActions(_actionConsumer);
-            DeviceStates = new DeviceStatesActions(_actionConsumer);
-            Endpoints = new EndpointsActions(_actionConsumer);
-            Events = new EventsActions(_actionConsumer);
-            Mailboxes = new MailboxesActions(_actionConsumer);
-            Playbacks = new PlaybacksActions(_actionConsumer);
-            Recordings = new RecordingsActions(_actionConsumer);
-            Sounds = new SoundsActions(_actionConsumer);
-            // Setup Event Handlers
-            _eventProducer.OnMessageReceived += _eventProducer_OnMessageReceived;
-            _eventProducer.OnConnectionStateChanged += _eventProducer_OnConnectionStateChanged;
-
-            _subscribeAllEvents = subscribeAllEvents;
+            var scheme = ssl ? "https" : "http";
             _ssl = ssl;
-            _serializerOptions.Converters.Add(new DateTimeConverterUsingDateTimeParse());
+            _endPoint = endPoint;
+            _http = new HttpClient { BaseAddress = new Uri($"{scheme}://{endPoint.Host}:{endPoint.Port}/ari/") };
+            var auth = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{endPoint.Username}:{endPoint.Password}"));
+            _http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", auth);
+            _subscribeAllEvents = subscribeAllEvents;
+            _dispatcher = CreateDispatcher();
+            _eventProducer = serviceProvider.GetRequiredService<IEventProducer>();
+            _logger = serviceProvider.GetService<ILogger<AriClient>>();
+            _eventProducer.OnConnectionStateChanged += _eventProducer_OnConnectionStateChanged;
+            _eventProducer.OnEvent += _eventProducer_OnMessageReceived;
+
+            Asterisk = new AsteriskActions(this);
+            Applications = new ApplicationsActions(this);
+            Bridges = new BridgesActions(this);
+            Channels = new ChannelsActions(this);
+            DeviceStates = new DeviceStatesActions(this);
+            Endpoints = new EndpointsActions(this);
+            Events = new EventsActions(this);
+            Mailboxes = new MailboxesActions(this);
+            Playbacks = new PlaybacksActions(this);
+            Recordings = new RecordingsActions(this);
+            Sounds = new SoundsActions(this);
         }
 
-        public void Dispose()
+        public IAsteriskActions Asterisk { get; }
+        public IApplicationsActions Applications { get; }
+        public IBridgesActions Bridges { get; }
+        public IChannelsActions Channels { get; }
+        public IDeviceStatesActions DeviceStates { get; }
+        public IEndpointsActions Endpoints { get; }
+        public IEventsActions Events { get; }
+        public IMailboxesActions Mailboxes { get; }
+        public IPlaybacksActions Playbacks { get; }
+        public IRecordingsActions Recordings { get; }
+        public ISoundsActions Sounds { get; }
+
+        public bool Connected => _eventProducer.IsConnected;
+
+        public EventDispatchingStrategy EventDispatchingStrategy { get; set; } = EventDispatchingStrategy.ThreadPool;
+
+        public async Task Connect(bool subscribeAllEvents)
         {
-            _eventProducer.OnConnectionStateChanged -= _eventProducer_OnConnectionStateChanged;
-            _eventProducer.OnMessageReceived -= _eventProducer_OnMessageReceived;
-
-            Disconnect().Wait();
-        }
-
-        #endregion
-
-        #region Private and Protected Methods
-
-
-        private async Task _eventProducer_OnConnectionStateChanged(IEventProducer sender)
-        {
-            if (_eventProducer.State != ConnectionState.Open)
-                await Reconnect();
-
-            if (OnConnectionStateChanged != null)
-                await OnConnectionStateChanged(sender);
-        }
-
-        private async Task _eventProducer_OnMessageReceived(IEventProducer sender, string message)
-        {
-#if DEBUG
-            Debug.WriteLine(message);
-#endif
-            // load the message
-            var jsonMsg = JsonDocument.Parse(message);
-            var eventName = jsonMsg.RootElement.GetProperty("type").GetString();
-            var type = Type.GetType("Arke.ARI.Models." + eventName + "Event");
-            var evnt =
-                (type != null)
-                    ? (Event)JsonSerializer.Deserialize(message, type, _serializerOptions)
-                    : (Event)JsonSerializer.Deserialize(message, typeof(Event), _serializerOptions);
-
+            // need to setup and connect the websocket engine.
             lock (_syncRoot)
             {
                 if (_dispatcher == null)
-                    return;
+                    _dispatcher = CreateDispatcher();
+            }
+            var websocketEndpoint = $"{(_ssl ? "wss" : "ws")}://{_endPoint.Host}:{_endPoint.Port}/ari/events?api_key={_endPoint.Username}:{_endPoint.Password}&app={_application}&subscribeAllEvents={subscribeAllEvents}";
+            await _eventProducer.ConnectAsync(websocketEndpoint);
+        }
+
+        IAriDispatcher CreateDispatcher()
+        {
+            switch (EventDispatchingStrategy)
+            {
+                case EventDispatchingStrategy.ThreadPool:
+                    return new ThreadPoolDispatcher();
+                case EventDispatchingStrategy.AsyncTask:
+                    return new AsyncDispatcher();
+                case EventDispatchingStrategy.DedicatedThread:
+                    return new DedicatedThreadDispatcher();
+                default:
+                    throw new InvalidOperationException("Unknown EventDispatchingStrategy: " + EventDispatchingStrategy);
+            }
+        }
+
+        public Task Disconnect()
+        {
+            return Task.CompletedTask;
+        }
+
+        private static string Normalize(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return string.Empty;
+            if (path.StartsWith("/")) path = path.Substring(1);
+            return path;
+        }
+        public async Task<T> GetAsync<T>(string path) => await _http.GetFromJsonAsync<T>(Normalize(path)) ?? default!;
+        public async Task GetAsync(string path) { var r = await _http.GetAsync(Normalize(path)); r.EnsureSuccessStatusCode(); }
+        public async Task<T> PostAsync<T>(string path) { var r = await _http.PostAsync(Normalize(path), null); r.EnsureSuccessStatusCode(); return await r.Content.ReadFromJsonAsync<T>() ?? default!; }
+        public async Task PostAsync(string path) { var r = await _http.PostAsync(Normalize(path), null); r.EnsureSuccessStatusCode(); }
+        public async Task<T> PutAsync<T>(string path) { var r = await _http.PutAsync(Normalize(path), null); r.EnsureSuccessStatusCode(); return await r.Content.ReadFromJsonAsync<T>() ?? default!; }
+        public async Task PutAsync(string path) { var r = await _http.PutAsync(Normalize(path), null); r.EnsureSuccessStatusCode(); }
+        public async Task DeleteAsync(string path) { var r = await _http.DeleteAsync(Normalize(path)); r.EnsureSuccessStatusCode(); }
+        public async Task<T> DeleteAsync<T>(string path) { var r = await _http.DeleteAsync(Normalize(path)); r.EnsureSuccessStatusCode(); return await r.Content.ReadFromJsonAsync<T>() ?? default!; }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _http.Dispose();
+            _disposed = true;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Dispose();
+            return ValueTask.CompletedTask;
+        }
+
+        private void _eventProducer_OnConnectionStateChanged(object? sender, EventArgs e)
+        {
+
+        }
+
+        private void _eventProducer_OnMessageReceived(object sender, EventReceivedEventArgs e)
+        {
+#if DEBUG
+            Debug.WriteLine(e.RawData);
+#endif
+            var eventName = e.EventData.Type;
+            var type = Type.GetType("Arke.ARI.Models." + eventName + "Event");
+
+            var evnt =
+                type != null
+                ? (Event)JsonSerializer.Deserialize(e.RawData, type)
+                : (Event)JsonSerializer.Deserialize(e.RawData, typeof(Event));
+
+            lock (_syncRoot)
+            {
+                if (_dispatcher == null) return;
 
                 _dispatcher.QueueAction(() =>
                 {
@@ -179,90 +168,13 @@ namespace Arke.ARI
                     {
                         FireEvent(evnt.Type, evnt, this);
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
-                        // Handle any exceptions that were thrown by the invoked event handler
-                        if (!UnhandledException(this, ex))
-                        {
-                            Console.WriteLine("The event listener " + evnt.Type.ToString() + " cause an exeption: " + ex.Message);
-                        }
+                        if (!UnhandledException(this, e))
+                            _logger?.LogError(e, "Error processing event {EventType}", evnt.Type);
                     }
                 });
             }
         }
-
-        private async Task Reconnect()
-        {
-            TimeSpan reconnectDelay;
-
-            lock (_syncRoot)
-            {
-                var shouldReconnect = _autoReconnect
-                    && _eventProducer.State != ConnectionState.Open
-                    && _eventProducer.State != ConnectionState.Connecting;
-
-                if (!shouldReconnect)
-                    return;
-
-                reconnectDelay = _autoReconnectDelay;
-            }
-
-            if (reconnectDelay != TimeSpan.Zero)
-                Thread.Sleep(reconnectDelay);
-            await _eventProducer.ConnectAsync(_subscribeAllEvents, _ssl);
-        }
-
-
-
-        IAriDispatcher CreateDispatcher()
-        {
-            switch (EventDispatchingStrategy)
-            {
-                case EventDispatchingStrategy.DedicatedThread: return new DedicatedThreadDispatcher();
-                case EventDispatchingStrategy.ThreadPool: return new ThreadPoolDispatcher();
-                case EventDispatchingStrategy.AsyncTask: return new AsyncDispatcher();
-            }
-
-            throw new AriException(EventDispatchingStrategy.ToString());
-        }
-
-        #endregion
-
-        #region Public Methods
-
-        public bool Connected
-        {
-            get { return _eventProducer.State == ConnectionState.Open; }
-        }
-
-        public virtual async Task Connect(bool autoReconnect = true, int autoReconnectDelay = 5)
-        {
-            lock (_syncRoot)
-            {
-                _autoReconnect = autoReconnect;
-                _autoReconnectDelay = TimeSpan.FromSeconds(autoReconnectDelay);
-                if (_dispatcher == null)
-                    _dispatcher = CreateDispatcher();
-            }
-
-            await _eventProducer.ConnectAsync(_subscribeAllEvents, _ssl);
-        }
-
-        public virtual async Task Disconnect()
-        {
-            lock (_syncRoot)
-            {
-                _autoReconnect = false;
-                if (_dispatcher != null)
-                {
-                    _dispatcher.Dispose();
-                    _dispatcher = null;
-                }
-            }
-
-            await _eventProducer.DisconnectAsync();
-        }
-
-        #endregion
     }
 }

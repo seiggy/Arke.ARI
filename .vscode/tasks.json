@@ -1,0 +1,85 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"build",
+				"${workspaceFolder}/Arke.ARI.sln",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary;ForceNoAlign"
+			],
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "publish",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"publish",
+				"${workspaceFolder}/Arke.ARI.sln",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary;ForceNoAlign"
+			],
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "watch",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"watch",
+				"run",
+				"--project",
+				"${workspaceFolder}/Arke.ARI.sln"
+			],
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Build Arke.ARI.Tests",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"d:\\github\\Arke.ARI\\Arke.ARI.Tests\\Arke.ARI.Tests.csproj",
+				"-v",
+				"minimal"
+			]
+		},
+		{
+			"label": "Rebuild Arke.ARI.Tests",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"d:\\github\\Arke.ARI\\Arke.ARI.Tests\\Arke.ARI.Tests.csproj",
+				"-v",
+				"minimal"
+			]
+		},
+		{
+			"label": "Rebuild tests after AriClient lifecycle surface",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"d:\\github\\Arke.ARI\\Arke.ARI.Tests\\Arke.ARI.Tests.csproj",
+				"-v",
+				"minimal"
+			]
+		},
+		{
+			"label": "test",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"d:\\github\\Arke.ARI\\Arke.ARI.Tests\\Arke.ARI.Tests.csproj",
+				"-v",
+				"minimal"
+			]
+		}
+	]
+}

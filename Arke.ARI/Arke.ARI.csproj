@@ -1,7 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>Arke.ARI</AssemblyName>
     <RootNamespace>Arke.ARI</RootNamespace>
     <Version>3.0.0</Version>
@@ -12,7 +11,7 @@
     <Description>Asterisk ARI Api wrapper - forked from AsterNET.ARI</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Title>Arke ARI</Title>
-    <Copyright>2003 - Zachary Way</Copyright>
+    <Copyright>2025 - Zachary Way</Copyright>
     <PackageProjectUrl>https://github.com/seiggy/arke.ari</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/seiggy/arke.ari</RepositoryUrl>
@@ -22,6 +21,7 @@
 v3.0.0
  Migrated the package to .NET Standard 2.0
  Refactored and migrated from RestSharp to HttpClient
+ Migrated from Websocket4Net to base .NET Websockets
 v2.0.1
  Fixing RestSharp v107 case bug
 v2.0.0
@@ -34,20 +34,45 @@ v2.0.0
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+	  <CompilerGeneratedFilesOutputPath>./Generated</CompilerGeneratedFilesOutputPath>
+    <LangVersion>13</LangVersion>
+    <TargetFrameworks>net8.0</TargetFrameworks>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0|AnyCPU'">
+    <IsTrimmable>True</IsTrimmable>
+    <IsAotCompatible>True</IsAotCompatible>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0|AnyCPU'">
+    <IsTrimmable>True</IsTrimmable>
+    <IsAotCompatible>True</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.8" />
+    <PackageReference Include="OpenTelemetry" Version="1.12.0" />
+    <PackageReference Include="System.Text.Json" Version="9.0.8" />
   </ItemGroup>
 
+
   <ItemGroup>
-    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+    <ProjectReference Include="..\CodeGenerator\ARICodeGen\ARICodeGen.csproj">
+      <OutputItemType>Analyzer</OutputItemType>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <Private>True</Private>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Middleware\Default\RESTActions\" />
-  </ItemGroup>
+
   <ItemGroup>
     <None Include="..\LICENSE.txt">
       <Pack>True</Pack>
@@ -57,6 +82,22 @@ v2.0.0
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include=".\asterisk-config.json" />
+    <AdditionalFiles Include=".\Data\Applications.json" />
+    <AdditionalFiles Include=".\Data\Asterisk.json" />
+    <AdditionalFiles Include=".\Data\Bridges.json" />
+    <AdditionalFiles Include=".\Data\Channels.json" />
+    <AdditionalFiles Include=".\Data\DeviceStates.json" />
+    <AdditionalFiles Include=".\Data\Endpoints.json" />
+    <AdditionalFiles Include=".\Data\Events.json" />
+    <AdditionalFiles Include=".\Data\mailboxes.json" />
+    <AdditionalFiles Include=".\Data\Playbacks.json" />
+    <AdditionalFiles Include=".\Data\Recordings.json" />
+    <AdditionalFiles Include=".\Data\Sounds.json" />
+
   </ItemGroup>
 
 </Project>

@@ -36,13 +36,13 @@ namespace SimpleConfAsync
         private static async Task RunDemo(IServiceProvider serviceProvider)
         {
             var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-            
+
             try
             {
                 logger.LogInformation("Starting Simple Conference Demo Application");
-                
+
                 Client = new AriClient(
-                    new StasisEndpoint("192.168.1.165", 8088, "asterisk", "asterisk"), 
+                    new StasisEndpoint("192.168.1.165", 8088, "asterisk", "asterisk"),
                     serviceProvider,
                     AppConfig.AppName);
 
@@ -64,7 +64,7 @@ namespace SimpleConfAsync
                 // Destroy all the conferences and their bridges
                 Conference.Conferences.ForEach(async x => await x.DestroyConference());
                 Conference.Conferences = null;
-                
+
                 logger.LogInformation("Conference demo completed");
             }
             catch (Exception ex)
@@ -79,7 +79,7 @@ namespace SimpleConfAsync
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Stasis end event for channel {ChannelId}", e.Channel.Id);
-            
+
             if (e.Application != AppConfig.AppName) return;
 
             var conf = Conference.Conferences.SingleOrDefault(x => x.ConferenceUsers.Any(c => c.Channel.Id == e.Channel.Id));
@@ -92,7 +92,7 @@ namespace SimpleConfAsync
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Stasis start event for channel {ChannelId}", e.Channel.Id);
-            
+
             if (e.Application != AppConfig.AppName) return;
             var failed = true;
             if (e.Args.Count == 0)

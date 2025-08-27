@@ -13,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Package.nuspec = Package.nuspec
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ARICodeGen", "CodeGeneratror\ARICodeGen\ARICodeGen.csproj", "{9A6809EF-E0C7-4552-98FA-2D75A33CCFE3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ARICodeGen", "CodeGenerator\ARICodeGen\ARICodeGen.csproj", "{9A6809EF-E0C7-4552-98FA-2D75A33CCFE3}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AsyncSamples", "AsyncSamples", "{31012840-0DA0-4F79-8C4E-952D1422DD0A}"
 EndProject

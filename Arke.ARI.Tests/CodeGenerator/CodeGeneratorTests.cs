@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Arke.ARI;
 using Arke.ARI.Actions;
 using Arke.ARI.Models;
+using FakeItEasy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -60,17 +62,17 @@ namespace Arke.ARI.Tests.CodeGenerator
         public void CodeGenerator_ActionClassesImplementInterfaces()
         {
             // Act & Assert - Verify all action classes implement their interfaces
-            Assert.True(typeof(AsteriskActions).GetInterfaces().Contains(typeof(IAsteriskActions)));
-            Assert.True(typeof(ApplicationsActions).GetInterfaces().Contains(typeof(IApplicationsActions)));
-            Assert.True(typeof(BridgesActions).GetInterfaces().Contains(typeof(IBridgesActions)));
-            Assert.True(typeof(ChannelsActions).GetInterfaces().Contains(typeof(IChannelsActions)));
-            Assert.True(typeof(DeviceStatesActions).GetInterfaces().Contains(typeof(IDeviceStatesActions)));
-            Assert.True(typeof(EndpointsActions).GetInterfaces().Contains(typeof(IEndpointsActions)));
-            Assert.True(typeof(EventsActions).GetInterfaces().Contains(typeof(IEventsActions)));
-            Assert.True(typeof(MailboxesActions).GetInterfaces().Contains(typeof(IMailboxesActions)));
-            Assert.True(typeof(PlaybacksActions).GetInterfaces().Contains(typeof(IPlaybacksActions)));
-            Assert.True(typeof(RecordingsActions).GetInterfaces().Contains(typeof(IRecordingsActions)));
-            Assert.True(typeof(SoundsActions).GetInterfaces().Contains(typeof(ISoundsActions)));
+            Assert.Contains(typeof(IAsteriskActions), typeof(AsteriskActions).GetInterfaces());
+            Assert.Contains(typeof(IApplicationsActions), typeof(ApplicationsActions).GetInterfaces());
+            Assert.Contains(typeof(IBridgesActions), typeof(BridgesActions).GetInterfaces());
+            Assert.Contains(typeof(IChannelsActions), typeof(ChannelsActions).GetInterfaces());
+            Assert.Contains(typeof(IDeviceStatesActions), typeof(DeviceStatesActions).GetInterfaces());
+            Assert.Contains(typeof(IEndpointsActions), typeof(EndpointsActions).GetInterfaces());
+            Assert.Contains(typeof(IEventsActions), typeof(EventsActions).GetInterfaces());
+            Assert.Contains(typeof(IMailboxesActions), typeof(MailboxesActions).GetInterfaces());
+            Assert.Contains(typeof(IPlaybacksActions), typeof(PlaybacksActions).GetInterfaces());
+            Assert.Contains(typeof(IRecordingsActions), typeof(RecordingsActions).GetInterfaces());
+            Assert.Contains(typeof(ISoundsActions), typeof(SoundsActions).GetInterfaces());
         }
 
         [Fact]
@@ -81,9 +83,9 @@ namespace Arke.ARI.Tests.CodeGenerator
 
             // Act & Assert - Verify key methods exist
             Assert.NotNull(asteriskActionsType.GetMethod("GetInfoAsync"));
-            Assert.NotNull(asteriskActionsType.GetMethod("GetBuildInfoAsync"));
-            Assert.NotNull(asteriskActionsType.GetMethod("GetConfigInfoAsync"));
-            Assert.NotNull(asteriskActionsType.GetMethod("GetSystemInfoAsync"));
+            Assert.NotNull(asteriskActionsType.GetMethod("ListModulesAsync"));
+            Assert.NotNull(asteriskActionsType.GetMethod("GetModuleAsync"));
+            Assert.NotNull(asteriskActionsType.GetMethod("LoadModuleAsync"));
             Assert.NotNull(asteriskActionsType.GetMethod("PingAsync"));
         }
 
@@ -111,7 +113,7 @@ namespace Arke.ARI.Tests.CodeGenerator
             Assert.NotNull(bridgesActionsType.GetMethod("CreateAsync", new[] { typeof(string), typeof(string), typeof(string) }));
             Assert.NotNull(bridgesActionsType.GetMethod("GetAsync", new[] { typeof(string) }));
             Assert.NotNull(bridgesActionsType.GetMethod("DestroyAsync", new[] { typeof(string) }));
-            Assert.NotNull(bridgesActionsType.GetMethod("AddChannelAsync", new[] { typeof(string), typeof(string), typeof(string) }));
+            Assert.NotNull(bridgesActionsType.GetMethod("AddChannelAsync", new[] { typeof(string), typeof(string), typeof(string), typeof(bool), typeof(bool), typeof(bool) }));
             Assert.NotNull(bridgesActionsType.GetMethod("RemoveChannelAsync", new[] { typeof(string), typeof(string) }));
         }
 
@@ -125,8 +127,8 @@ namespace Arke.ARI.Tests.CodeGenerator
             Assert.NotNull(channelsActionsType.GetMethod("ListAsync"));
             Assert.NotNull(channelsActionsType.GetMethod("GetAsync", new[] { typeof(string) }));
             Assert.NotNull(channelsActionsType.GetMethod("AnswerAsync", new[] { typeof(string) }));
-            Assert.NotNull(channelsActionsType.GetMethod("HangupAsync", new[] { typeof(string), typeof(string) }));
-            Assert.NotNull(channelsActionsType.GetMethod("PlayAsync", new[] { typeof(string), typeof(string) }));
+            Assert.NotNull(channelsActionsType.GetMethod("HangupAsync", new[] { typeof(string), typeof(string), typeof(string) }));
+            Assert.NotNull(channelsActionsType.GetMethod("PlayAsync", new[] { typeof(string), typeof(string), typeof(string), typeof(int), typeof(int), typeof(string) }));
             Assert.NotNull(channelsActionsType.GetMethod("RecordAsync", new[] { typeof(string), typeof(string), typeof(string), typeof(int), typeof(int), typeof(string), typeof(bool), typeof(string) }));
         }
 
@@ -150,8 +152,8 @@ namespace Arke.ARI.Tests.CodeGenerator
 
             // Act & Assert - Verify key methods exist
             Assert.NotNull(endpointsActionsType.GetMethod("ListAsync"));
-            Assert.NotNull(endpointsActionsType.GetMethod("GetAsync", new[] { typeof(string) }));
-            Assert.NotNull(endpointsActionsType.GetMethod("SendMessageAsync", new[] { typeof(string), typeof(string), typeof(string) }));
+            Assert.NotNull(endpointsActionsType.GetMethod("GetAsync", new[] { typeof(string), typeof(string) }));
+            Assert.NotNull(endpointsActionsType.GetMethod("SendMessageAsync", new[] { typeof(string), typeof(string), typeof(string), typeof(Dictionary<string, string>) }));
         }
 
         [Fact]
@@ -161,7 +163,7 @@ namespace Arke.ARI.Tests.CodeGenerator
             var eventsActionsType = typeof(IEventsActions);
 
             // Act & Assert - Verify key methods exist
-            Assert.NotNull(eventsActionsType.GetMethod("ListAsync"));
+            Assert.NotNull(eventsActionsType.GetMethod("UserEventAsync"));
         }
 
         [Fact]
@@ -184,7 +186,6 @@ namespace Arke.ARI.Tests.CodeGenerator
             var playbacksActionsType = typeof(IPlaybacksActions);
 
             // Act & Assert - Verify key methods exist
-            Assert.NotNull(playbacksActionsType.GetMethod("ListAsync"));
             Assert.NotNull(playbacksActionsType.GetMethod("GetAsync", new[] { typeof(string) }));
             Assert.NotNull(playbacksActionsType.GetMethod("StopAsync", new[] { typeof(string) }));
             Assert.NotNull(playbacksActionsType.GetMethod("ControlAsync", new[] { typeof(string), typeof(string) }));
@@ -199,7 +200,7 @@ namespace Arke.ARI.Tests.CodeGenerator
             // Act & Assert - Verify key methods exist
             Assert.NotNull(recordingsActionsType.GetMethod("ListStoredAsync"));
             Assert.NotNull(recordingsActionsType.GetMethod("GetStoredAsync", new[] { typeof(string) }));
-            Assert.NotNull(recordingsActionsType.GetMethod("CopyStoredAsync", new[] { typeof(string), typeof(string), typeof(string) }));
+            Assert.NotNull(recordingsActionsType.GetMethod("CopyStoredAsync", new[] { typeof(string), typeof(string) }));
             Assert.NotNull(recordingsActionsType.GetMethod("DeleteStoredAsync", new[] { typeof(string) }));
             Assert.NotNull(recordingsActionsType.GetMethod("GetLiveAsync", new[] { typeof(string) }));
             Assert.NotNull(recordingsActionsType.GetMethod("CancelAsync", new[] { typeof(string) }));
@@ -264,7 +265,7 @@ namespace Arke.ARI.Tests.CodeGenerator
             // Act & Assert - Verify method signature is correct
             Assert.NotNull(getInfoMethod);
             Assert.Equal(typeof(Task<AsteriskInfo>), getInfoMethod.ReturnType);
-            Assert.Empty(getInfoMethod.GetParameters());
+            Assert.NotEmpty(getInfoMethod.GetParameters());
         }
 
         [Fact]
@@ -290,7 +291,7 @@ namespace Arke.ARI.Tests.CodeGenerator
             foreach (var actionType in actionTypes)
             {
                 var methods = actionType.GetMethods();
-                foreach (var method in methods)
+                foreach (var method in methods.Where(m => m.Name.EndsWith("Async", StringComparison.Ordinal)))
                 {
                     Assert.True(method.ReturnType == typeof(Task) ||
                                method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>),

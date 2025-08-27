@@ -1,0 +1,62 @@
+{
+  "schemaSource": {
+    "type": "embedded",
+    "endpoint": null,
+    "username": null,
+    "password": null
+  },
+  "resources": {
+    "Applications": {
+      "sourcePath": "Data/Applications.json",
+      "enabled": true
+    },
+    "Asterisk": {
+      "sourcePath": "Data/Asterisk.json",
+      "enabled": true
+    },
+    "Bridges": {
+      "sourcePath": "Data/Bridges.json",
+      "enabled": true
+    },
+    "Channels": {
+      "sourcePath": "Data/Channels.json",
+      "enabled": true
+    },
+    "DeviceStates": {
+      "sourcePath": "Data/DeviceStates.json",
+      "enabled": true
+    },
+    "Endpoints": {
+      "sourcePath": "Data/Endpoints.json",
+      "enabled": true
+    },
+    "Events": {
+      "sourcePath": "Data/Events.json",
+      "enabled": true
+    },
+    "Playbacks": {
+      "sourcePath": "Data/Playbacks.json",
+      "enabled": true
+    },
+    "Recordings": {
+      "sourcePath": "Data/Recordings.json",
+      "enabled": true
+    },
+    "Sounds": {
+      "sourcePath": "Data/Sounds.json",
+      "enabled": true
+    },
+    "Mailboxes": {
+      "sourcePath": "Data/mailboxes.json",
+      "enabled": true
+    }
+  },
+  "codeGeneration": {
+    "namespace": "Arke.ARI",
+    "modelsNamespace": "Arke.ARI.Models",
+    "actionsNamespace": "Arke.ARI.Actions",
+    "generateNullableAnnotations": true,
+    "generateAsyncMethods": true,
+    "generateXmlDocumentation": true
+  }
+}

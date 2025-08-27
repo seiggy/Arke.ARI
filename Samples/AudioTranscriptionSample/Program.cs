@@ -3,7 +3,6 @@ using Arke.ARI.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
-using Arke.ARI.Middleware.Default;
 using Microsoft.Extensions.Configuration;
 using System.Runtime.CompilerServices;
 using System.Reflection;
@@ -16,6 +15,7 @@ using System.ComponentModel;
 using NAudio.Wave;
 using NAudio.Codecs;
 using AudioTranscriptionSample.Rev.AI;
+using Arke.ARI.Middleware.ExternalMedia;
 
 namespace AudioTranscriptionSample
 {
@@ -89,7 +89,7 @@ namespace AudioTranscriptionSample
                 ActionClient.OnStasisStartEvent += c_OnStasisStartEvent;
                 ActionClient.OnStasisEndEvent += c_OnStasisEndEvent;
                 
-                await ActionClient.Connect();
+                await ActionClient.Connect(true);
 
                 // Create simple bridge
                 SimpleBridge = await ActionClient.Bridges.CreateAsync("mixing", Guid.NewGuid().ToString(), AppName);
@@ -97,7 +97,7 @@ namespace AudioTranscriptionSample
                 // subscribe to bridge events
                 await ActionClient.Applications.SubscribeAsync(AppName, "bridge:" + SimpleBridge.Id);
 
-                var externalMediaProvider = new WebSocketExternalMediaProvider(listenPort);
+                var externalMediaProvider = new WebSocketNAudioExternalMediaProvider(listenPort);
                 externalMediaProvider.OnAudioReceivedHandler += ExternalMediaProvider_OnAudioReceivedHandler;
                 Task.Run(() => externalMediaProvider.Connect());
                 //var externalMediaChannel = await ActionClient.Channels.ExternalMediaAsync()
@@ -125,14 +125,14 @@ namespace AudioTranscriptionSample
             }
         }
 
-        private static async Task RevAiClient_OnFinalResponseReceived(RevAiClient sender, RevAiResponse response)
+        private static async void RevAiClient_OnFinalResponseReceived(RevAiClient sender, RevAiResponse response)
         {
             if (response.Transcript == null) return;
             var text = string.Concat(response.Transcript.Select(t => t.Value));
             Console.WriteLine($"RESPONSE: {response.StartTimeStamp}: {text}");
         }
 
-        private static async Task RevAiClient_OnPartialResponseReceived(RevAiClient sender, RevAiResponse response)
+        private static async void RevAiClient_OnPartialResponseReceived(RevAiClient sender, RevAiResponse response)
         {
             // do nothing
         }
@@ -192,7 +192,7 @@ namespace AudioTranscriptionSample
 
         static bool transcribing = false;
         
-        private static async Task ExternalMediaProvider_OnAudioReceivedHandler(Arke.ARI.Middleware.IExternalMediaProvider sender, byte[] audio)
+        private static async void ExternalMediaProvider_OnAudioReceivedHandler(Arke.ARI.Middleware.ExternalMedia.IExternalMediaProvider sender, byte[] audio)
         {
             //pushAudioInputStream.Write(audio);
             if (!transcribing) return;
@@ -226,7 +226,7 @@ namespace AudioTranscriptionSample
         }
 
 
-        static async Task c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
+        static async void c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
         {
             // remove from bridge
             try
@@ -258,7 +258,7 @@ namespace AudioTranscriptionSample
             await revAiClient.EndStream();
         }
 
-        static async Task c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)
+        static async void c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)
         {
             // answer channel
             await ActionClient.Channels.AnswerAsync(e.Channel.Id);

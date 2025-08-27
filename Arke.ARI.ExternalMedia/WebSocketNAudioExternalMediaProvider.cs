@@ -9,12 +9,13 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Arke.ARI.WebSocket;
 
 namespace Arke.ARI.Middleware.ExternalMedia
 {
     public class WebSocketNAudioExternalMediaProvider : BackgroundService, IExternalMediaProvider
     {
-        private ConnectionState _connectionState = ConnectionState.None;
+        private ConnectionState _connectionState = ConnectionState.Closed;
         private int _port;
         private UdpClient _socket;
         private Task _executingTask;

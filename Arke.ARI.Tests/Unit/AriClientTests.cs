@@ -71,7 +71,7 @@ namespace Arke.ARI.Tests.Unit
         public void Constructor_WithNullApplication_ThrowsArgumentNullException()
         {
             // Act & Assert
-            var ex = Assert.Throws<ArgumentNullException>(() =>
+            var ex = Assert.Throws<ArgumentException>(() =>
                 new AriClient(TestEndpoint, ServiceProvider, null));
 
             Assert.Equal("application", ex.ParamName);

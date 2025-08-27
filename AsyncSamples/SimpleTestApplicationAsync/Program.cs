@@ -40,10 +40,9 @@ namespace Arke.ARI.SimpleTestApplicationAsync
                 // Hook into required events
                 ActionClient.OnStasisStartEvent += c_OnStasisStartEvent;
                 ActionClient.OnChannelDtmfReceivedEvent += ActionClientOnChannelDtmfReceivedEvent;
-                ActionClient.OnConnectionStateChanged += ActionClientOnConnectionStateChanged;
-
+                
                 logger.LogInformation("Connecting to Asterisk ARI...");
-                ActionClient.Connect();
+                await ActionClient.Connect(true);
 
                 logger.LogInformation("Demo application running. Press any key to exit.");
                 Console.ReadKey();
@@ -56,13 +55,13 @@ namespace Arke.ARI.SimpleTestApplicationAsync
             }
         }
 
-        private static async Task ActionClientOnConnectionStateChanged(object sender)
+        private static async void ActionClientOnConnectionStateChanged(object sender)
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Connection state is now {Connected}", ActionClient.Connected);
         }
 
-        private static async Task ActionClientOnChannelDtmfReceivedEvent(IAriClient sender, ChannelDtmfReceivedEvent e)
+        private static async void ActionClientOnChannelDtmfReceivedEvent(IAriClient sender, ChannelDtmfReceivedEvent e)
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("DTMF received: {Digit} on channel {ChannelId}", e.Digit, e.Channel.Id);
@@ -83,7 +82,7 @@ namespace Arke.ARI.SimpleTestApplicationAsync
             }
         }
 
-        private static async Task c_OnStasisStartEvent(IAriClient sender, StasisStartEvent e)
+        private static async void c_OnStasisStartEvent(IAriClient sender, StasisStartEvent e)
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Stasis start event received for channel {ChannelId}", e.Channel.Id);

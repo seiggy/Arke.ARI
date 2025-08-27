@@ -5,56 +5,50 @@ using System.Threading.Tasks;
 
 namespace Arke.ARI.Dispatchers
 {
-    // This dispatcher uses a dedicated thread to dispatch ARI events, so that their order is preserved and
-    // the event handlers are not called from different threads at the same time.
-
-    sealed class DedicatedThreadDispatcher : IAriDispatcher
+    public sealed class DedicatedThreadDispatcher : IAriDispatcher
     {
-        readonly BlockingCollection<Action> _eventQueue = new BlockingCollection<Action>();
-        readonly CancellationTokenSource _threadCancellation = new CancellationTokenSource();
+        readonly BlockingCollection<Action> _actionQueue = new();
+        readonly CancellationTokenSource _threadCancellation = new();
 
         public DedicatedThreadDispatcher()
         {
-            // copy the variables the thread needs on the stack, so we don't capture 'this'
-            // into the thread and so would prevent the finalizer from running.
             var cancellationToken = _threadCancellation.Token;
-            var queue = _eventQueue;
+            var queue = _actionQueue;
 
             var thread = new Thread(() => EventDispatcherThread(cancellationToken, queue));
             thread.Start();
         }
 
-        ~DedicatedThreadDispatcher()
+        public void Dispose()
         {
-            _threadCancellation.Cancel();
+            // No resources to dispose
         }
 
-        public Task QueueAction(Action action)
+        public void QueueAction(Action action)
         {
-            _eventQueue.Add(action);
+            _actionQueue.Add(action ?? throw new ArgumentNullException(nameof(action)));
+        }
+
+        public Task QueueActionAsync(Func<Task> action)
+        {
+            _actionQueue.Add(() => action?.Invoke());
             return Task.CompletedTask;
         }
 
-        public void Dispose()
-        {
-            _threadCancellation.Cancel();
-            // We can not join the thread here, because we might be called back from it 
-            // and don't want to cause a deadlock. The GC will clean everything up 
-            // including the CancellationTokenSource and the BlockingCollection.
-        }
-
-        static void EventDispatcherThread(CancellationToken cancellationToken, BlockingCollection<Action> queue)
+        static void EventDispatcherThread(CancellationToken cancellationToken, BlockingCollection<Action> actionQueue)
         {
             try
             {
                 while (true)
                 {
-                    var action = queue.Take(cancellationToken);
+                    var action = actionQueue.Take(cancellationToken);
                     action();
                 }
             }
             catch (OperationCanceledException)
-            {}
+            {
+                // Thread is being cancelled, exit gracefully
+            }
         }
     }
 }

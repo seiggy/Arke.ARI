@@ -28,7 +28,7 @@ namespace Arke.ARI.Tests.Integration
             Logger.LogInformation("Initializing integration tests");
         }
 
-        public async Task DisposeAsync()
+        public new async Task DisposeAsync()
         {
             if (_isConnected)
             {
@@ -43,7 +43,8 @@ namespace Arke.ARI.Tests.Integration
                 }
             }
 
-            _client?.Dispose();
+            if (_client != null)
+                await _client.DisposeAsync();
             await base.DisposeAsync();
         }
 
@@ -53,8 +54,7 @@ namespace Arke.ARI.Tests.Integration
             // Act
             await AssertAsyncOperation(async () =>
             {
-                await _client.Connect(false);
-                _isConnected = true;
+                await _client.Connect(true);
             }, "Connect to Asterisk");
 
             // Assert

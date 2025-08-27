@@ -14,8 +14,14 @@
     <tags>Asterisk Arke Asterisk.NET ARI Stasis</tags>
   </metadata>
   <files>
-    <file src="Arke.ARI\bin\Release\net6.0\Arke.ARI.dll" target="lib\net6.0\Arke.ARI.dll" />
-    <file src="Arke.ARI\bin\Release\net6.0\Arke.ARI.pdb" target="lib\net6.0\Arke.ARI.pdb" />
+    <file src="Arke.ARI\bin\Release\net8.0\Arke.ARI.dll" target="lib\net8.0\Arke.ARI.dll" />
+    <file src="Arke.ARI\bin\Release\net8.0\Arke.ARI.pdb" target="lib\net8.0\Arke.ARI.pdb" />
+    <file src="Arke.ARI\bin\Release\net8.0\Arke.ARI.SourceGenerator.dll" target="lib\net8.0\Arke.ARI.SourceGenerator.dll" />
+    <file src="Arke.ARI\bin\Release\net8.0\Arke.ARI.SourceGenerator.pdb" target="lib\net8.0\Arke.ARI.SourceGenerator.pdb" />
+    <file src="Arke.ARI\bin\Release\net9.0\Arke.ARI.dll" target="lib\net9.0\Arke.ARI.dll" />
+    <file src="Arke.ARI\bin\Release\net9.0\Arke.ARI.pdb" target="lib\net9.0\Arke.ARI.pdb" />
+    <file src="Arke.ARI\bin\Release\net9.0\Arke.ARI.SourceGenerator.dll" target="lib\net9.0\Arke.ARI.SourceGenerator.dll" />
+    <file src="Arke.ARI\bin\Release\net9.0\Arke.ARI.SourceGenerator.pdb" target="lib\net9.0\Arke.ARI.SourceGenerator.pdb" />
     <file src="changelog.txt" target="changelog.txt" />
     <file src="LICENSE.txt" target="LICENSE.txt" />
     <file src="README.md" target="README.md" />

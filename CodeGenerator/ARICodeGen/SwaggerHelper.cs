@@ -1,0 +1,52 @@
+﻿namespace ARICodeGen;
+
+public class SwaggerHelper
+{
+    public static string TypeConvert(string inputType)
+    {
+        if (inputType.Contains("["))
+            return inputType.Replace("[", "<").Replace("]", ">");
+        if (inputType.ToLower() == "date")
+            return "DateTime";
+        if (inputType.ToLower() == "boolean")
+            return "bool";
+        if (inputType.ToLower() == "containers")
+            return "Dictionary<string, string>";
+        if (inputType.ToLower() == "binary")
+            return "byte[]";
+        return inputType;
+    }
+
+    public static string TypeConvertTask(string inputType)
+    {
+        if (inputType.ToLower() == "void")
+            return "Task";
+        if (inputType.Contains("["))
+            return $"Task<{inputType.Replace("[", "<").Replace("]", ">")}>";
+        if (inputType.ToLower() == "date")
+            return "Task<DateTime>";
+        if (inputType.ToLower() == "boolean")
+            return "Task<bool>";
+        if (inputType.ToLower() == "containers")
+            return "Task<Dictionary<string, string>>";
+        if (inputType.ToLower() == "binary")
+            return "Task<byte[]>";
+        return $"Task<{inputType}>";
+    }
+
+    public static string GetSafeName(string name)
+    {
+        return UppercaseFirst(name);
+    }
+
+    private static string UppercaseFirst(string s)
+    {
+        // Check for empty string.
+        if (string.IsNullOrEmpty(s))
+        {
+            return string.Empty;
+        }
+        // Return char and concat substring.
+        return char.ToUpper(s[0]) + s.Substring(1);
+    }
+}

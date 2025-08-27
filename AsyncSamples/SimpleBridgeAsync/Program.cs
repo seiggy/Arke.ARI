@@ -15,12 +15,15 @@
  *
  */
 
+using Arke.ARI.Dispatchers;
 using Arke.ARI.Models;
-using System;
-using System.Threading.Tasks;
+using Arke.ARI.WebSocket;
+using Arke.ARI.WebSocket.Dispatchers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
 
 namespace Arke.ARI.SimpleBridgeAsync
 {
@@ -30,13 +33,20 @@ namespace Arke.ARI.SimpleBridgeAsync
         public static Bridge SimpleBridge;
         private static IServiceProvider _serviceProvider;
 
-        private const string AppName = "arke";
+        private const string AppName = "integration-test";
 
         static async Task Main(string[] args)
         {
             HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
             builder.Services.AddLogging();
             builder.Services.AddHttpClient();
+            builder.Services.AddAriWebSocketWithDispatcher<AsyncTaskDispatcher>((options) =>
+            {
+                options.ApplicationName = AppName;
+                options.BaseUrl = "http://192.168.1.165:8088/ari";
+                options.Username = "asterisk";
+                options.Password = "asterisk";
+            });
             using IHost host = builder.Build();
             _serviceProvider = host.Services;
             await RunDemo(host.Services);
@@ -60,7 +70,7 @@ namespace Arke.ARI.SimpleBridgeAsync
                 ActionClient.OnChannelDtmfReceivedEvent += c_OnDtmfReceivedEvent;
 
                 logger.LogInformation("Connecting to Asterisk ARI...");
-                await ActionClient.Connect();
+                await ActionClient.Connect(true);
 
                 // Create simple bridge
                 SimpleBridge = await ActionClient.Bridges.CreateAsync("mixing", Guid.NewGuid().ToString(), AppName);
@@ -122,7 +132,7 @@ namespace Arke.ARI.SimpleBridgeAsync
             }
         }
 
-        private static async Task c_OnDtmfReceivedEvent(IAriClient sender, ChannelDtmfReceivedEvent e)
+        private static async void c_OnDtmfReceivedEvent(IAriClient sender, ChannelDtmfReceivedEvent e)
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("DTMF received: {Digit} on channel {ChannelId}", e.Digit, e.Channel.Id);
@@ -152,7 +162,7 @@ namespace Arke.ARI.SimpleBridgeAsync
             }
         }
 
-        static async Task c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
+        static async void c_OnStasisEndEvent(object sender, Arke.ARI.Models.StasisEndEvent e)
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Stasis end event for channel {ChannelId}", e.Channel.Id);
@@ -171,7 +181,7 @@ namespace Arke.ARI.SimpleBridgeAsync
             }
         }
 
-        static async Task c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)
+        static async void c_OnStasisStartEvent(object sender, Arke.ARI.Models.StasisStartEvent e)
         {
             var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Stasis start event for channel {ChannelId}", e.Channel.Id);
