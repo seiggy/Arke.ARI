@@ -139,7 +139,7 @@ namespace Arke.ARI.Actions
                 request.AddUrlSegment("applicationName", applicationName);
             if (filter != null)
             {
-                request.AddParameter("application/json", new { filter = filter }, ParameterType.RequestBody);
+                request.AddParameter("application/json", filter, ParameterType.RequestBody);
             }
 
             var response = Execute<Application>(request);
@@ -271,7 +271,7 @@ namespace Arke.ARI.Actions
                 request.AddUrlSegment("applicationName", applicationName);
             if (filter != null)
             {
-                request.AddParameter("application/json", new { filter = filter }, ParameterType.RequestBody);
+                request.AddParameter("application/json", filter, ParameterType.RequestBody);
             }
 
             var response = await ExecuteTask<Application>(request);
